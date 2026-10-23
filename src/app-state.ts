@@ -1,5 +1,5 @@
 import { createMemo, createRoot, createSignal } from 'solid-js';
-import { indexByCountry, type CountryEntry } from './core/country';
+import { ALL_COUNTRIES, indexByCountry, type CountryEntry } from './core/country';
 import type { Playlist } from './core/m3u';
 import { fetchDevPlaylistUrl } from './core/net';
 import { loadPlaylistFrom } from './core/playlist-source';
@@ -7,9 +7,6 @@ import { loadCountry, loadPlaylistUrl, saveCountry, savePlaylistUrl } from './co
 import { parseXtreamUrl } from './core/xtream';
 
 export type Screen = 'boot' | 'setup' | 'country' | 'home' | 'settings' | 'tv' | 'flix';
-
-/** Pseudo-pays qui regroupe tout le catalogue. */
-export const ALL_COUNTRIES = 'ALL';
 
 /**
  * État global de l'app : réglages (lien, pays), playlist chargée et écran courant.

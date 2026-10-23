@@ -45,9 +45,15 @@ export function devProxy({ defaultPlaylistUrl, userAgent }: DevProxyOptions = {}
           const upstream = await requestUpstream(target, {
             userAgent: resolvedUserAgent,
             signal: abort.signal,
+            range: req.headers.range,
           });
           res.statusCode = upstream.status;
           if (upstream.contentType) res.setHeader('Content-Type', upstream.contentType);
+          // Films : le navigateur lit par morceaux (HTTP 206) pour pouvoir avancer et reculer.
+          for (const header of ['content-length', 'content-range', 'accept-ranges']) {
+            const value = upstream.headers[header];
+            if (value) res.setHeader(header, value);
+          }
 
           if (
             /mpegurl/i.test(upstream.contentType) ||

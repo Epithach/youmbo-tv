@@ -43,12 +43,17 @@ export function parseXtreamUrl(url: string): XtreamCredentials | undefined {
   return { server: parsed.origin, username, password };
 }
 
-export function xtreamApiUrl(credentials: XtreamCredentials, action: string): string {
+export function xtreamApiUrl(
+  credentials: XtreamCredentials,
+  action: string,
+  extra: Record<string, string | number> = {},
+): string {
   const params = new URLSearchParams({
     username: credentials.username,
     password: credentials.password,
     action,
   });
+  for (const [key, value] of Object.entries(extra)) params.set(key, String(value));
   return `${credentials.server}/player_api.php?${params}`;
 }
 
