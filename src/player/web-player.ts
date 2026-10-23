@@ -161,4 +161,28 @@ export class WebPlayer implements Player {
   destroy(): void {
     this.stop();
   }
+
+  togglePause(): void {
+    if (this.video.paused) this.video.play().catch(() => undefined);
+    else this.video.pause();
+  }
+
+  seekBy(seconds: number): void {
+    const duration = this.duration();
+    const target = this.video.currentTime + seconds;
+    this.video.currentTime = Math.max(0, duration ? Math.min(target, duration - 1) : target);
+  }
+
+  position(): number {
+    return this.video.currentTime || 0;
+  }
+
+  duration(): number {
+    const { duration } = this.video;
+    return Number.isFinite(duration) ? duration : 0;
+  }
+
+  paused(): boolean {
+    return this.video.paused;
+  }
 }

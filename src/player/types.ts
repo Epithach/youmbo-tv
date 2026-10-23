@@ -13,6 +13,14 @@ export interface Player {
   play(url: string): void;
   stop(): void;
   destroy(): void;
+  /** Films et séries : pause / reprise. */
+  togglePause(): void;
+  /** Avance (positif) ou recule (négatif), en secondes. */
+  seekBy(seconds: number): void;
+  /** Position et durée en secondes (durée 0 si inconnue, ex. direct). */
+  position(): number;
+  duration(): number;
+  paused(): boolean;
 }
 
 export type StreamKind = 'hls' | 'mpegts' | 'native';

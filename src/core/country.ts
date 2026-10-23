@@ -14,6 +14,8 @@ import type { Channel, Playlist } from './m3u';
  */
 
 export const DEFAULT_COUNTRY = 'FR';
+/** Pseudo-pays qui regroupe tout le catalogue. */
+export const ALL_COUNTRIES = 'ALL';
 export const INTERNATIONAL = 'INTL';
 
 interface CountryDefinition {

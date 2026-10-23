@@ -323,3 +323,258 @@ body {
 .tv--fullscreen .column {
   display: none;
 }
+
+/* --- YoumboFlix --- */
+
+.flix {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 48px;
+  overflow: hidden;
+}
+
+.flix__header {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 24px;
+}
+
+.flix__brand {
+  margin-right: 48px;
+  color: var(--accent);
+  font-size: 36px;
+  font-weight: 700;
+}
+
+.flix__tab {
+  margin-right: 32px;
+  padding: 6px 0;
+  border-bottom: 3px solid transparent;
+  color: var(--text-muted);
+  font-size: 24px;
+}
+
+.flix__tab--selected {
+  color: var(--text);
+}
+
+.flix__tabs--active .flix__tab--selected {
+  border-bottom-color: var(--accent);
+}
+
+.flix__soon {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.flix__message,
+.flix-row__message {
+  color: var(--text-muted);
+}
+
+.flix-row {
+  margin-bottom: 28px;
+  opacity: 0.55;
+}
+
+.flix-row--active {
+  opacity: 1;
+}
+
+.flix-row__title {
+  margin: 0 0 12px;
+  font-size: 24px;
+}
+
+.flix-row__posters {
+  display: flex;
+  overflow: hidden;
+}
+
+.poster {
+  flex: none;
+  width: 150px;
+  margin: 0 16px 0 0;
+  border: 3px solid transparent;
+  border-radius: 8px;
+}
+
+.poster--selected {
+  border-color: var(--accent);
+}
+
+.poster__image,
+.poster__placeholder {
+  display: block;
+  width: 100%;
+  height: 222px;
+  border-radius: 6px;
+  background: var(--surface);
+  object-fit: cover;
+}
+
+.poster__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  text-align: center;
+  font-size: 16px;
+}
+
+.poster__title {
+  margin-top: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.poster--selected .poster__title {
+  color: var(--text);
+}
+
+/* --- Fiche film --- */
+
+.detail {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}
+
+.detail__backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.25;
+}
+
+.detail__content {
+  position: relative;
+  display: flex;
+  padding: 64px;
+}
+
+.detail__poster {
+  flex: none;
+  width: 300px;
+  margin-right: 48px;
+  border-radius: 12px;
+}
+
+.detail__text {
+  max-width: 900px;
+}
+
+.detail__title {
+  margin: 0 0 12px;
+  font-size: 44px;
+}
+
+.detail__facts {
+  color: var(--text-muted);
+}
+
+.detail__plot {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  font-size: 22px;
+  line-height: 1.5;
+}
+
+.detail__credits {
+  color: var(--text-muted);
+  font-size: 18px;
+}
+
+.detail .menu {
+  margin-top: 32px;
+}
+
+.detail .menu__item {
+  min-width: 200px;
+  min-height: 64px;
+}
+
+/* --- Lecteur VOD --- */
+
+.vod-player {
+  position: relative;
+  flex: 1;
+  background: #000;
+}
+
+.vod-player__video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.vod-player__status {
+  position: absolute;
+  top: 45%;
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.vod-player__status--error {
+  color: var(--error);
+}
+
+.vod-player__overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 48px 64px 32px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+}
+
+.vod-player__title {
+  margin: 0 0 16px;
+  font-size: 28px;
+}
+
+.vod-player__bar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.vod-player__progress {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.vod-player__time {
+  margin: 12px 0 0;
+  color: var(--text-muted);
+}
+
+.vod-player__hint {
+  float: right;
+  font-size: 16px;
+}
+
+.vod-player__warning {
+  position: absolute;
+  top: 32px;
+  left: 50%;
+  margin: 0;
+  padding: 12px 24px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #ffd27a;
+  transform: translateX(-50%);
+}

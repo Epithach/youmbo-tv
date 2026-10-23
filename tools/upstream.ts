@@ -1,4 +1,4 @@
-import http, { type IncomingMessage } from 'node:http';
+import http, { type IncomingHttpHeaders, type IncomingMessage } from 'node:http';
 import https from 'node:https';
 
 /**
@@ -30,6 +30,7 @@ export interface UpstreamResponse {
   contentType: string;
   /** URL finale, après redirections. */
   url: string;
+  headers: IncomingHttpHeaders;
   body: IncomingMessage;
   /** Lit le corps en texte (jusqu'à `limit` octets si précisé). */
   text(limit?: number): Promise<string>;
@@ -39,6 +40,8 @@ interface RequestOptions {
   userAgent: string;
   signal?: AbortSignal;
   maxRedirects?: number;
+  /** En-tête `Range` du navigateur, pour avancer/reculer dans un film. */
+  range?: string;
 }
 
 /**
@@ -48,13 +51,14 @@ interface RequestOptions {
  */
 export function requestUpstream(
   url: string,
-  { userAgent, signal, maxRedirects = 5 }: RequestOptions,
+  { userAgent, signal, maxRedirects = 5, range }: RequestOptions,
 ): Promise<UpstreamResponse> {
   return new Promise((resolve, reject) => {
     const target = new URL(url);
     const client = target.protocol === 'https:' ? https : http;
     const headers: Record<string, string> = { Accept: '*/*' };
     if (userAgent) headers['User-Agent'] = userAgent;
+    if (range) headers.Range = range;
 
     const request = client.get(target, { headers, signal }, (response) => {
       const status = response.statusCode ?? 0;
@@ -66,6 +70,7 @@ export function requestUpstream(
         requestUpstream(new URL(location, target).href, {
           userAgent,
           signal,
+          range,
           maxRedirects: maxRedirects - 1,
         }).then(resolve, reject);
         return;
@@ -75,6 +80,7 @@ export function requestUpstream(
         status,
         contentType: response.headers['content-type'] ?? '',
         url: target.href,
+        headers: response.headers,
         body: response,
         text: (limit) => readText(response, limit),
       });
