@@ -1,4 +1,4 @@
-import { createSignal, For, onCleanup, onMount, Show } from 'solid-js';
+import { createSignal, onCleanup, onMount, Show } from 'solid-js';
 import { loadVolume, saveVolume } from '../../core/storage';
 import {
   createPlayer,
@@ -8,6 +8,7 @@ import {
   type TrackType,
 } from '../../player';
 import { clamp, useRemote } from '../../ui/remote';
+import { ControlBar, Progress, TrackMenu, type ControlButton } from './PlayerControls';
 
 interface VodPlayerProps {
   title: string;
@@ -39,15 +40,6 @@ const CONTROLS_MS = 5000;
 const SHORT_SEEK = 10;
 const LONG_SEEK = 60;
 const VOLUME_STEP = 0.1;
-
-export function formatTime(seconds: number): string {
-  const total = Math.max(0, Math.floor(seconds));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
-}
 
 type ControlId = 'back' | 'play' | 'forward' | 'audio' | 'subtitle' | 'volumeDown' | 'volumeUp';
 
@@ -167,7 +159,7 @@ export function VodPlayer(props: VodPlayerProps) {
     showControls();
   };
 
-  const buttons = (): { id: ControlId; label: string; disabled?: boolean }[] => [
+  const buttons = (): ControlButton<ControlId>[] => [
     { id: 'back', label: `« ${SHORT_SEEK} s` },
     { id: 'play', label: paused() ? '▶  Lecture' : '❚❚  Pause' },
     { id: 'forward', label: `${SHORT_SEEK} s »` },
@@ -245,8 +237,6 @@ export function VodPlayer(props: VodPlayerProps) {
     showControls();
   });
 
-  const progress = () => (duration() > 0 ? (position() / duration()) * 100 : 0);
-
   return (
     <div class="vod-player">
       <video ref={(el) => (video = el)} class="vod-player__video" />
@@ -262,57 +252,25 @@ export function VodPlayer(props: VodPlayerProps) {
 
       <Show when={menu()}>
         {(current) => (
-          <div class="track-menu">
-            <h2 class="track-menu__title">
-              {current().type === 'audio' ? 'Langue audio' : 'Sous-titres'}
-            </h2>
-            <For each={menuEntries(current().type)}>
-              {(entry, index) => (
-                <div
-                  class="track-menu__item"
-                  classList={{ 'track-menu__item--focused': index() === current().selected }}
-                >
-                  <span class="track-menu__check">{entry.selected ? '✓' : ''}</span>
-                  {entry.label}
-                </div>
-              )}
-            </For>
-            <Show when={!tracks().switchable}>
-              <p class="track-menu__note">
-                Le navigateur du PC ne sait pas changer de piste dans ce fichier : le choix se fera
-                sur la TV.
-              </p>
-            </Show>
-          </div>
+          <TrackMenu
+            title={current().type === 'audio' ? 'Langue audio' : 'Sous-titres'}
+            entries={menuEntries(current().type)}
+            focused={current().selected}
+            readOnly={!tracks().switchable}
+          />
         )}
       </Show>
 
       <Show when={controls() || paused() || state() !== 'playing'}>
         <div class="vod-player__overlay">
-          <p class="vod-player__title">{props.title}</p>
-          <div class="vod-player__bar">
-            <div class="vod-player__progress" style={{ width: `${progress()}%` }} />
-          </div>
-          <p class="vod-player__time">
-            {formatTime(position())} / {duration() > 0 ? formatTime(duration()) : '--:--'}
-            <span class="vod-player__volume">Volume {Math.round(volume() * 100)} %</span>
-          </p>
+          <Progress
+            title={props.title}
+            position={position()}
+            duration={duration()}
+            volume={volume()}
+          />
           <Show when={controls()}>
-            <div class="controls">
-              <For each={buttons()}>
-                {(button) => (
-                  <span
-                    class="controls__button"
-                    classList={{
-                      'controls__button--focused': button.id === focused(),
-                      'controls__button--disabled': button.disabled,
-                    }}
-                  >
-                    {button.label}
-                  </span>
-                )}
-              </For>
-            </div>
+            <ControlBar buttons={buttons()} focused={focused()} />
           </Show>
         </div>
       </Show>

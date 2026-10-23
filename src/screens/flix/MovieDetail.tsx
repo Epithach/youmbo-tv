@@ -1,11 +1,6 @@
 import { createResource, createSignal, Show } from 'solid-js';
-import {
-  displayTitle,
-  loadVodDetails,
-  resizePoster,
-  type CatalogItem,
-  type VodDetails,
-} from '../../core/vod';
+import { loadVodDetails, type CatalogItem, type VodDetails } from '../../core/catalog';
+import { displayTitle, resizePoster } from '../../core/catalog-display';
 import type { XtreamCredentials } from '../../core/xtream';
 import { Menu, pressMenuItem, type MenuItem } from '../../ui/Menu';
 import { useRemote } from '../../ui/remote';

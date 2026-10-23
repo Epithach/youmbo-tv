@@ -49,7 +49,7 @@ export interface Player {
   selectTrack(type: TrackType, id: string | null): void;
 }
 
-export type StreamKind = 'hls' | 'mpegts' | 'native';
+type StreamKind = 'hls' | 'mpegts' | 'native';
 
 /** Devine le type de flux d'après l'URL. Les URLs Xtream sans extension sont du MPEG-TS. */
 export function detectStreamKind(url: string): StreamKind {

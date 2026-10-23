@@ -9,14 +9,9 @@ import {
 } from 'solid-js';
 import { app } from '../../app-state';
 import { buildRows, type CatalogRow } from '../../core/catalog-rows';
-import {
-  categoriesForCountry,
-  displayTitle,
-  loadCategories,
-  resizePoster,
-  type CatalogItem,
-  type CatalogKind,
-} from '../../core/vod';
+import { loadCategories, type CatalogItem, type CatalogKind } from '../../core/catalog';
+import { categoriesForCountry } from '../../core/catalog-language';
+import { displayTitle, resizePoster } from '../../core/catalog-display';
 import type { XtreamCredentials } from '../../core/xtream';
 import { Marquee } from '../../ui/Marquee';
 import { clamp, useRemote } from '../../ui/remote';

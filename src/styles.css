@@ -363,11 +363,6 @@ body {
   border-bottom-color: var(--accent);
 }
 
-.flix__soon {
-  font-size: 14px;
-  opacity: 0.7;
-}
-
 .flix__message,
 .flix-row__message {
   color: var(--text-muted);

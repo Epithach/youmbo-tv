@@ -1,13 +1,11 @@
 import { createMemo, createResource, For, Show } from 'solid-js';
 import {
-  displayEpisodeTitle,
-  displayTitle,
   loadSeriesDetails,
-  resizePoster,
   seasonsOf,
   type CatalogItem,
   type SeriesEpisode,
-} from '../../core/vod';
+} from '../../core/catalog';
+import { displayEpisodeTitle, displayTitle, resizePoster } from '../../core/catalog-display';
 import type { XtreamCredentials } from '../../core/xtream';
 import { Marquee } from '../../ui/Marquee';
 import { clamp, useRemote } from '../../ui/remote';

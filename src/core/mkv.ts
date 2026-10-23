@@ -143,7 +143,7 @@ function parseTrackEntry(bytes: Uint8Array, entry: Element): MediaTrack | undefi
 }
 
 /** Octets lus en début de fichier : les pistes y sont décrites, avant l'image et le son. */
-const PROBE_BYTES = 1024 * 1024;
+const PROBE_BYTES = 512 * 1024;
 
 /**
  * Télécharge le début d'un MKV (requête Range) et en lit les pistes.

@@ -1,17 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_COUNTRIES } from './country';
+import { episodeUrl, movieUrl, seasonsOf, type SeriesEpisode } from './catalog';
+import { categoriesForCountry, categoryLanguage } from './catalog-language';
 import {
-  categoriesForCountry,
-  categoryLanguage,
   displayCategoryName,
   displayEpisodeTitle,
   displayTitle,
-  episodeUrl,
-  movieUrl,
   resizePoster,
-  seasonsOf,
-  type SeriesEpisode,
-} from './vod';
+} from './catalog-display';
 
 const categories = [
   'VOD - RÉCEMMENT AJOUTER [FR]',
