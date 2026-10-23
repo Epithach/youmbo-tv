@@ -117,12 +117,17 @@ body {
   overflow: hidden;
 }
 
+.column--countries {
+  width: 15%;
+}
+
 .column--groups {
-  width: 22%;
+  width: 19%;
+  border-left: 1px solid var(--bg);
 }
 
 .column--channels {
-  width: 30%;
+  width: 26%;
   border-left: 1px solid var(--bg);
 }
 
@@ -170,6 +175,13 @@ body {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.row__count {
+  flex: none;
+  margin-left: 8px;
+  font-size: 14px;
+  opacity: 0.6;
 }
 
 .row__badge {
