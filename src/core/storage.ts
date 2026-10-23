@@ -23,6 +23,16 @@ function write(key: string, value: string | undefined): void {
 export const loadPlaylistUrl = () => read(PLAYLIST_KEY);
 export const savePlaylistUrl = (url: string | undefined) => write(PLAYLIST_KEY, url);
 
+const VOLUME_KEY = 'youmbo.volume';
+
+/** Volume du lecteur (0 à 1), retenu d'une vidéo à l'autre. */
+export function loadVolume(): number {
+  const raw = read(VOLUME_KEY);
+  const value = raw === undefined ? NaN : Number(raw);
+  return Number.isFinite(value) && value >= 0 && value <= 1 ? value : 1;
+}
+export const saveVolume = (volume: number) => write(VOLUME_KEY, String(volume));
+
 /** Dernier pays choisi dans le menu. */
 export const loadCountry = () => read(COUNTRY_KEY);
 export const saveCountry = (code: string) => write(COUNTRY_KEY, code);

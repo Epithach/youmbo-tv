@@ -1,7 +1,27 @@
 import type Hls from 'hls.js';
 import type Mpegts from 'mpegts.js';
+import { describeTrack, probeMkvTracks } from '../core/mkv';
 import { proxify } from '../core/net';
-import { detectStreamKind, type Player, type PlayerEvents, type PlayerState } from './types';
+import {
+  detectStreamKind,
+  type Player,
+  type PlayerEvents,
+  type PlayerState,
+  type TrackList,
+  type TrackOption,
+  type TrackType,
+} from './types';
+
+/** Pistes audio exposées par certains navigateurs (Safari, Chrome avec option). */
+interface BrowserAudioTrack {
+  id: string;
+  label: string;
+  language: string;
+  enabled: boolean;
+}
+type VideoWithAudioTracks = HTMLVideoElement & {
+  audioTracks?: { length: number; [index: number]: BrowserAudioTrack };
+};
 
 /** Secondes de vidéo à avoir en réserve avant de lancer la lecture d'un flux live. */
 const CUSHION_SECONDS = 2.5;
@@ -17,6 +37,7 @@ export class WebPlayer implements Player {
   /** Incrémenté à chaque lecture pour ignorer les chargements devenus obsolètes. */
   private generation = 0;
   private state: PlayerState = 'idle';
+  private url?: string;
 
   constructor(
     private readonly video: HTMLVideoElement,
@@ -41,6 +62,7 @@ export class WebPlayer implements Player {
 
   play(url: string): void {
     this.stop();
+    this.url = url;
     const generation = ++this.generation;
     this.setState('loading');
 
@@ -184,5 +206,78 @@ export class WebPlayer implements Player {
 
   paused(): boolean {
     return this.video.paused;
+  }
+
+  volume(): number {
+    return this.video.muted ? 0 : this.video.volume;
+  }
+
+  setVolume(volume: number): void {
+    this.video.muted = false;
+    this.video.volume = Math.min(1, Math.max(0, volume));
+  }
+
+  async tracks(): Promise<TrackList> {
+    // HLS : hls.js connaît les pistes et sait en changer.
+    if (this.hls) {
+      const hls = this.hls;
+      const options: TrackOption[] = [
+        ...hls.audioTracks.map((track, index) => ({
+          id: String(index),
+          type: 'audio' as const,
+          label: track.name || track.lang || `Piste ${index + 1}`,
+          selected: index === hls.audioTrack,
+        })),
+        ...hls.subtitleTracks.map((track, index) => ({
+          id: String(index),
+          type: 'subtitle' as const,
+          label: track.name || track.lang || `Sous-titres ${index + 1}`,
+          selected: index === hls.subtitleTrack,
+        })),
+      ];
+      return { options, switchable: true };
+    }
+
+    // Fichier MKV : on lit les pistes dans son en-tête.
+    if (!this.url || !/\.(mkv|webm)(\?|$)/i.test(this.url)) {
+      return { options: [], switchable: false };
+    }
+    const tracks = await probeMkvTracks(proxify(this.url));
+    const browserAudio = (this.video as VideoWithAudioTracks).audioTracks;
+    const audio = tracks.filter((track) => track.kind === 'audio');
+    const defaultAudio = audio.find((track) => track.isDefault) ?? audio[0];
+    const options: TrackOption[] = [
+      ...audio.map((track) => ({
+        id: String(track.number),
+        type: 'audio' as const,
+        label: describeTrack(track),
+        selected: track === defaultAudio,
+      })),
+      ...tracks
+        .filter((track) => track.kind === 'subtitle')
+        .map((track) => ({
+          id: String(track.number),
+          type: 'subtitle' as const,
+          label: describeTrack(track),
+          // Le navigateur n'affiche pas les sous-titres intégrés au MKV.
+          selected: false,
+        })),
+    ];
+    return { options, switchable: Boolean(browserAudio && browserAudio.length > 1) };
+  }
+
+  selectTrack(type: TrackType, id: string | null): void {
+    if (this.hls) {
+      if (type === 'audio' && id !== null) this.hls.audioTrack = Number(id);
+      if (type === 'subtitle') this.hls.subtitleTrack = id === null ? -1 : Number(id);
+      return;
+    }
+    const browserAudio = (this.video as VideoWithAudioTracks).audioTracks;
+    if (type !== 'audio' || !browserAudio || id === null) return;
+    // Les pistes du navigateur suivent l'ordre du fichier.
+    void this.tracks().then(({ options }) => {
+      const index = options.filter((o) => o.type === 'audio').findIndex((o) => o.id === id);
+      for (let i = 0; i < browserAudio.length; i++) browserAudio[i].enabled = i === index;
+    });
   }
 }
