@@ -20,6 +20,7 @@ import {
   type VodCategory,
 } from '../../core/vod';
 import type { XtreamCredentials } from '../../core/xtream';
+import { Marquee } from '../../ui/Marquee';
 import { clamp, useRemote } from '../../ui/remote';
 
 /** Rangées rendues autour de la sélection (au-dessus / en dessous). */
@@ -223,7 +224,12 @@ function PosterRow(props: { state: RowState | undefined; selected: number; activ
                 >
                   {(src) => <img class="poster__image" src={src()} alt="" loading="lazy" />}
                 </Show>
-                <figcaption class="poster__title">{displayTitle(item.name)}</figcaption>
+                <figcaption class="poster__title">
+                  <Marquee
+                    text={displayTitle(item.name)}
+                    active={props.active && index === props.selected}
+                  />
+                </figcaption>
               </figure>
             )}
           </For>

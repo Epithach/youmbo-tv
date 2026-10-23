@@ -9,6 +9,7 @@ import {
   type SeriesEpisode,
 } from '../../core/vod';
 import type { XtreamCredentials } from '../../core/xtream';
+import { Marquee } from '../../ui/Marquee';
 import { clamp, useRemote } from '../../ui/remote';
 import { WindowedList } from '../../ui/WindowedList';
 
@@ -112,11 +113,13 @@ export function SeriesDetail(props: SeriesDetailProps) {
                 onSelect={(index) => props.onPositionChange({ ...props.position, episode: index })}
                 onActivate={(index) => props.onPlay(episodes(), index, title())}
               >
-                {(episode) => (
+                {(episode, index) => (
                   <>
-                    <span class="row__label">
-                      {episode.episode_num}. {displayEpisodeTitle(episode)}
-                    </span>
+                    <Marquee
+                      class="row__label"
+                      text={`${episode.episode_num}. ${displayEpisodeTitle(episode)}`}
+                      active={index === props.position.episode}
+                    />
                     <Show when={episode.info?.duration}>
                       <span class="row__count">{episode.info?.duration}</span>
                     </Show>

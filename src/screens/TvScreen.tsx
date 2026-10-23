@@ -3,6 +3,7 @@ import { app } from '../app-state';
 import { displayGroupName } from '../core/country';
 import type { Channel } from '../core/m3u';
 import { createPlayer, type Player, type PlayerState } from '../player';
+import { Marquee } from '../ui/Marquee';
 import { clamp, useRemote } from '../ui/remote';
 import { WindowedList } from '../ui/WindowedList';
 
@@ -104,7 +105,13 @@ export function TvScreen() {
             if (index !== groupIndex()) selectGroup(index);
           }}
         >
-          {(group) => <span class="row__label">{displayGroupName(group)}</span>}
+          {(group, index) => (
+            <Marquee
+              class="row__label"
+              text={displayGroupName(group)}
+              active={index === groupIndex()}
+            />
+          )}
         </WindowedList>
       </nav>
 
@@ -120,14 +127,14 @@ export function TvScreen() {
           }}
           onActivate={(index) => playChannel(channels()[index])}
         >
-          {(channel) => (
+          {(channel, index) => (
             <>
               <span class="row__logo">
                 <Show when={channel.logo}>
                   <img src={channel.logo} alt="" loading="lazy" />
                 </Show>
               </span>
-              <span class="row__label">{channel.name}</span>
+              <Marquee class="row__label" text={channel.name} active={index === channelIndex()} />
               <Show when={playing()?.id === channel.id}>
                 <span class="row__badge">▶</span>
               </Show>

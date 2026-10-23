@@ -424,10 +424,8 @@ body {
 }
 
 .poster__title {
+  display: block;
   margin-top: 6px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
   font-size: 15px;
   color: var(--text-muted);
 }
@@ -606,4 +604,44 @@ body {
 
 .detail .list {
   max-width: 760px;
+}
+
+/* --- Texte défilant (titres trop longs) --- */
+
+.marquee {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.marquee--scrolling {
+  text-overflow: clip;
+}
+
+.marquee__text {
+  display: inline-block;
+}
+
+.marquee--scrolling .marquee__text {
+  animation-name: marquee;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+/* Pause au début, défilement, pause à la fin, retour. */
+@keyframes marquee {
+  0%,
+  15% {
+    transform: translateX(0);
+  }
+  45%,
+  60% {
+    transform: translateX(var(--marquee-distance));
+  }
+  90%,
+  100% {
+    transform: translateX(0);
+  }
 }
