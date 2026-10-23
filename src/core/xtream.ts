@@ -79,6 +79,7 @@ export function buildXtreamPlaylist(
       group: categoryNames.get(String(stream.category_id)) ?? UNGROUPED,
       logo: stream.stream_icon || undefined,
       tvgId: stream.epg_channel_id || undefined,
+      streamId: stream.stream_id,
     }));
 
   const used = new Set(channels.map((channel) => channel.group));

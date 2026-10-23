@@ -6,6 +6,8 @@ export interface Channel {
   group: string;
   logo?: string;
   tvgId?: string;
+  /** Identifiant Xtream de la chaîne : sert à demander son programme (EPG). */
+  streamId?: number;
 }
 
 export interface Playlist {

@@ -64,6 +64,7 @@ describe('buildXtreamPlaylist', () => {
       group: 'France',
       logo: 'http://logo/tf1.png',
       tvgId: 'tf1.fr',
+      streamId: 10,
     });
     expect(playlist.channels[1]).toMatchObject({ logo: undefined, tvgId: undefined });
   });
