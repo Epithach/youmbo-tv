@@ -92,11 +92,12 @@ body {
 
 .menu--row {
   flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
-.menu--row > * + * {
-  margin-top: 0;
-  margin-left: 32px;
+.menu--row > * {
+  margin: 0 16px 24px;
 }
 
 .menu__item {
