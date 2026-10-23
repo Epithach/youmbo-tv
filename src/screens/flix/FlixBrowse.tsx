@@ -8,16 +8,14 @@ import {
   untrack,
 } from 'solid-js';
 import { app } from '../../app-state';
+import { buildRows, type CatalogRow } from '../../core/catalog-rows';
 import {
   categoriesForCountry,
-  displayCategoryName,
   displayTitle,
   loadCategories,
-  loadCategory,
   resizePoster,
   type CatalogItem,
   type CatalogKind,
-  type VodCategory,
 } from '../../core/vod';
 import type { XtreamCredentials } from '../../core/xtream';
 import { Marquee } from '../../ui/Marquee';
@@ -40,7 +38,7 @@ export interface BrowsePosition {
   tab: CatalogKind;
   /** Rangée sélectionnée par onglet ; -1 : barre d'onglets. */
   rows: Record<CatalogKind, number>;
-  /** Affiche sélectionnée par rangée (`kind|category_id`). */
+  /** Affiche sélectionnée par rangée (`kind|clé de la rangée`). */
   columns: Record<string, number>;
 }
 
@@ -60,48 +58,55 @@ interface FlixBrowseProps {
 type RowState = CatalogItem[] | 'loading' | 'error';
 
 /**
- * Accueil « à la Netflix » : une rangée d'affiches par catégorie, dans la
- * langue du pays choisi. Chaque rangée n'est chargée qu'à l'approche.
+ * Accueil « à la Netflix » : des rangées d'affiches (nouveautés, genres,
+ * plateformes) dans la langue du pays choisi. Chaque rangée n'est chargée
+ * qu'à l'approche.
  */
 export function FlixBrowse(props: FlixBrowseProps) {
   const kind = () => props.position.tab;
   const [allCategories] = createResource(kind, (current) =>
     loadCategories(props.credentials, current),
   );
-  const categories = createMemo<VodCategory[]>(() =>
-    categoriesForCountry(allCategories() ?? [], app.country()?.code ?? ''),
+  const catalogRows = createMemo<CatalogRow[]>(() =>
+    buildRows(
+      props.credentials,
+      kind(),
+      categoriesForCountry(allCategories() ?? [], app.country()?.code ?? ''),
+    ),
   );
   const [rows, setRows] = createSignal<Record<string, RowState>>({});
 
-  const rowKey = (category: VodCategory) => `${kind()}|${category.category_id}`;
+  const rowKey = (catalogRow: CatalogRow) => `${kind()}|${catalogRow.key}`;
 
-  const ensureLoaded = (category: VodCategory) => {
-    const key = rowKey(category);
-    if (untrack(rows)[key]) return;
+  const ensureLoaded = (catalogRow: CatalogRow) => {
+    const key = rowKey(catalogRow);
+    const state = untrack(rows)[key];
+    // Déjà chargée (ou en cours) : rien à faire. Vide ou en erreur : on réessaie en y revenant.
+    if (state === 'loading' || (Array.isArray(state) && state.length > 0)) return;
     setRows((current) => ({ ...current, [key]: 'loading' }));
-    loadCategory(props.credentials, kind(), category.category_id).then(
+    catalogRow.load().then(
       (items) => setRows((current) => ({ ...current, [key]: items })),
       () => setRows((current) => ({ ...current, [key]: 'error' })),
     );
   };
 
   const row = () => props.position.rows[kind()];
-  const column = (category: VodCategory) => props.position.columns[rowKey(category)] ?? 0;
+  const column = (catalogRow: CatalogRow) => props.position.columns[rowKey(catalogRow)] ?? 0;
 
   const visibleRows = createMemo(() => {
-    const list = categories();
+    const list = catalogRows();
     const start = Math.max(0, row() - ROWS_BEFORE);
     const visible = list.slice(start, Math.max(start, row()) + ROWS_AFTER + 1);
-    return visible.map((category, offset) => ({ category, index: start + offset }));
+    return visible.map((catalogRow, offset) => ({ catalogRow, index: start + offset }));
   });
 
   // Chargement à l'approche : seules les rangées affichées sont demandées.
   createEffect(() => {
-    for (const { category } of visibleRows()) ensureLoaded(category);
+    for (const { catalogRow } of visibleRows()) ensureLoaded(catalogRow);
   });
 
-  const itemsOf = (category: VodCategory): CatalogItem[] => {
-    const state = rows()[rowKey(category)];
+  const itemsOf = (catalogRow: CatalogRow): CatalogItem[] => {
+    const state = rows()[rowKey(catalogRow)];
     return Array.isArray(state) ? state : [];
   };
 
@@ -110,7 +115,7 @@ export function FlixBrowse(props: FlixBrowseProps) {
   const setRow = (value: number) => update({ rows: { ...props.position.rows, [kind()]: value } });
 
   useRemote((key) => {
-    const list = categories();
+    const list = catalogRows();
     const current = list[row()];
 
     // Barre d'onglets : ← → changent d'onglet, ↓ redescend dans les rangées.
@@ -168,17 +173,17 @@ export function FlixBrowse(props: FlixBrowseProps) {
 
       <Show when={!allCategories.loading} fallback={<p class="flix__message">Chargement…</p>}>
         <Show
-          when={categories().length > 0}
+          when={catalogRows().length > 0}
           fallback={<p class="flix__message">Rien de disponible pour ce pays.</p>}
         >
           <div class="flix__rows">
             <For each={visibleRows()}>
-              {({ category, index }) => (
+              {({ catalogRow, index }) => (
                 <section class="flix-row" classList={{ 'flix-row--active': index === row() }}>
-                  <h2 class="flix-row__title">{displayCategoryName(category.category_name)}</h2>
+                  <h2 class="flix-row__title">{catalogRow.title}</h2>
                   <PosterRow
-                    state={rows()[rowKey(category)]}
-                    selected={column(category)}
+                    state={rows()[rowKey(catalogRow)]}
+                    selected={column(catalogRow)}
                     active={index === row()}
                   />
                 </section>
