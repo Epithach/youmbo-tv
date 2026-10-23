@@ -913,3 +913,30 @@ body {
   border-radius: 2px;
   background: var(--accent);
 }
+
+/* --- Chaînes favorites --- */
+
+.row__star {
+  flex: none;
+  margin-left: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  visibility: hidden;
+}
+
+.row__star--on,
+.list__row--selected .row__star,
+.list__row:hover .row__star {
+  visibility: visible;
+}
+
+.row__star--on {
+  color: #ffc94a;
+}
+
+.channel-info__hint {
+  margin-left: 16px;
+  color: var(--text-muted);
+  font-size: 15px;
+  font-weight: 400;
+}

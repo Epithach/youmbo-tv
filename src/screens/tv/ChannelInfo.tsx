@@ -1,6 +1,7 @@
 import { createEffect, createSignal, onCleanup, Show } from 'solid-js';
 import { app } from '../../app-state';
 import { formatClock, loadShortEpg, nowAndNext, type Programme } from '../../core/epg';
+import { library } from '../../core/library';
 import type { Channel } from '../../core/m3u';
 
 /**
@@ -13,7 +14,7 @@ const SELECTION_DELAY_MS = 600;
 const CLOCK_MS = 30_000;
 
 /** Bandeau sous la vidéo : émission en cours (avec progression) et suivante. */
-export function ChannelInfo(props: { channel: Channel | undefined }) {
+export function ChannelInfo(props: { channel: Channel | undefined; showFavoriteHint: boolean }) {
   const [programmes, setProgrammes] = createSignal<{ channelId: string; list: Programme[] }>();
   const [clock, setClock] = createSignal(Date.now());
 
@@ -49,7 +50,16 @@ export function ChannelInfo(props: { channel: Channel | undefined }) {
     <Show when={props.channel}>
       {(channel) => (
         <div class="channel-info">
-          <p class="channel-info__name">{channel().name}</p>
+          <p class="channel-info__name">
+            {channel().name}
+            <Show when={props.showFavoriteHint}>
+              <span class="channel-info__hint">
+                {library.isFavoriteChannel(channel())
+                  ? '★ Favori · → pour retirer'
+                  : '→ pour ajouter aux favoris'}
+              </span>
+            </Show>
+          </p>
           <Show
             when={current()}
             fallback={
