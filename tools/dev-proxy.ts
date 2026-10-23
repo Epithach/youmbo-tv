@@ -1,7 +1,6 @@
-import { Readable } from 'node:stream';
-import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import type { Plugin } from 'vite';
 import { absolutizeHlsManifest } from './hls-rewrite.ts';
+import { requestUpstream, resolveUserAgent } from './upstream.ts';
 
 /**
  * Proxy du serveur de dev uniquement.
@@ -12,15 +11,16 @@ import { absolutizeHlsManifest } from './hls-rewrite.ts';
  * Sur la TV, une app Tizen n'est pas soumise au CORS : le proxy n'existe pas.
  */
 
-// Beaucoup de fournisseurs filtrent sur le User-Agent et acceptent celui de VLC.
-const USER_AGENT = 'VLC/3.0.21 LibVLC/3.0.21';
-
 interface DevProxyOptions {
   /** Playlist pré-remplie, lue depuis M3U_URL dans `.env.local`. */
   defaultPlaylistUrl?: string;
+  /** Nom (voir `USER_AGENTS`) ou User-Agent complet, via PROXY_USER_AGENT. */
+  userAgent?: string;
 }
 
-export function devProxy({ defaultPlaylistUrl }: DevProxyOptions = {}): Plugin {
+export function devProxy({ defaultPlaylistUrl, userAgent }: DevProxyOptions = {}): Plugin {
+  const resolvedUserAgent = resolveUserAgent(userAgent);
+
   return {
     name: 'youmbo:dev-proxy',
     apply: 'serve',
@@ -42,30 +42,22 @@ export function devProxy({ defaultPlaylistUrl }: DevProxyOptions = {}): Plugin {
         res.on('close', () => abort.abort());
 
         try {
-          const upstream = await fetch(target, {
-            headers: { 'User-Agent': USER_AGENT },
-            redirect: 'follow',
+          const upstream = await requestUpstream(target, {
+            userAgent: resolvedUserAgent,
             signal: abort.signal,
           });
           res.statusCode = upstream.status;
-          const contentType = upstream.headers.get('content-type') ?? '';
-          if (contentType) res.setHeader('Content-Type', contentType);
+          if (upstream.contentType) res.setHeader('Content-Type', upstream.contentType);
 
           if (
-            /mpegurl/i.test(contentType) ||
-            /\.m3u8?(\?|$)/i.test(new URL(upstream.url).pathname)
+            /mpegurl/i.test(upstream.contentType) ||
+            /\.m3u8?$/i.test(new URL(upstream.url).pathname)
           ) {
             res.end(absolutizeHlsManifest(await upstream.text(), upstream.url));
             return;
           }
 
-          if (!upstream.body) {
-            res.end();
-            return;
-          }
-          Readable.fromWeb(upstream.body as NodeReadableStream)
-            .on('error', () => res.destroy())
-            .pipe(res);
+          upstream.body.on('error', () => res.destroy()).pipe(res);
         } catch (error) {
           if (abort.signal.aborted) return;
           res.statusCode = 502;

@@ -57,6 +57,21 @@ describe('parseM3u', () => {
     expect(channels[0]).toMatchObject({ name: 'Chaîne', group: 'Info', url: 'http://x/1' });
   });
 
+  it('retire les faux titres de section', () => {
+    const { channels } = parseM3u(
+      [
+        '#EXTM3U',
+        '#EXTINF:-1 group-title="France",##### GENERAL #####',
+        'http://x/0',
+        '#EXTINF:-1 group-title="France",===== INFO =====',
+        'http://x/00',
+        '#EXTINF:-1 group-title="France",TF1',
+        'http://x/1',
+      ].join('\n'),
+    );
+    expect(channels.map((c) => [c.id, c.name])).toEqual([['0', 'TF1']]);
+  });
+
   it('utilise un nom et un groupe par défaut', () => {
     const { channels, groups } = parseM3u('#EXTM3U\nhttp://x/stream.m3u8');
     expect(channels[0]).toMatchObject({ name: 'http://x/stream.m3u8', group: UNGROUPED });
