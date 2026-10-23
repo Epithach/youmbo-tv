@@ -11,7 +11,10 @@ export function proxify(url: string): string {
 export async function fetchText(url: string, signal?: AbortSignal): Promise<string> {
   const response = await fetch(proxify(url), { signal });
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status} en chargeant ${new URL(url).host}`);
+    const hint = import.meta.env.DEV
+      ? ' Lance `npm run diagnose` pour trouver le lecteur (User-Agent) accepté.'
+      : '';
+    throw new Error(`${new URL(url).host} a refusé la requête (HTTP ${response.status}).${hint}`);
   }
   return response.text();
 }
