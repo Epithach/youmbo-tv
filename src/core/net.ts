@@ -5,7 +5,8 @@
  */
 export function proxify(url: string): string {
   if (!import.meta.env.DEV) return url;
-  return `/proxy?url=${encodeURIComponent(url)}`;
+  // URL absolue : mpegts.js télécharge depuis un worker (blob:), où une URL relative ne se résout pas.
+  return `${location.origin}/proxy?url=${encodeURIComponent(url)}`;
 }
 
 async function request(url: string, signal?: AbortSignal): Promise<Response> {

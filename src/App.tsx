@@ -186,7 +186,7 @@ export function App() {
       </Show>
 
       <section class="stage" classList={{ 'stage--hidden': !playlist() }}>
-        <video ref={(el) => (video = el)} class="stage__video" autoplay />
+        <video ref={(el) => (video = el)} class="stage__video" />
         <Switch>
           <Match when={!playing()}>
             <p class="stage__overlay">Choisis une chaîne et appuie sur OK</p>

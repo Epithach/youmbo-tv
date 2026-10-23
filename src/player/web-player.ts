@@ -3,6 +3,9 @@ import type Mpegts from 'mpegts.js';
 import { proxify } from '../core/net';
 import { detectStreamKind, type Player, type PlayerEvents, type PlayerState } from './types';
 
+/** Secondes de vidéo à avoir en réserve avant de lancer la lecture d'un flux live. */
+const CUSHION_SECONDS = 2.5;
+
 /**
  * Lecteur navigateur : hls.js pour le HLS, mpegts.js pour le MPEG-TS brut
  * (la majorité des flux IPTV), balise <video> pour le reste.
@@ -84,7 +87,18 @@ export class WebPlayer implements Player {
 
     const player = mpegts.createPlayer(
       { type: 'mpegts', isLive: true, url: proxify(url) },
-      { enableStashBuffer: false, liveBufferLatencyChasing: true },
+      {
+        // Démultiplexage hors du thread principal : l'UI ne fait pas saccader la vidéo.
+        enableWorker: true,
+        // On privilégie la fluidité au direct strict : pas de rattrapage de latence,
+        // qui vidait la réserve en permanence et provoquait coupures et sauts.
+        enableStashBuffer: true,
+        liveBufferLatencyChasing: false,
+        liveSync: false,
+        autoCleanupSourceBuffer: true,
+        autoCleanupMaxBackwardDuration: 30,
+        autoCleanupMinBackwardDuration: 15,
+      },
     );
     this.mpegts = player;
     player.on(mpegts.Events.ERROR, (type: string, details: string) =>
@@ -92,7 +106,38 @@ export class WebPlayer implements Player {
     );
     player.attachMediaElement(this.video);
     player.load();
-    Promise.resolve(player.play()).catch(() => undefined);
+    this.playWithCushion(generation);
+  }
+
+  /**
+   * Un flux live arrive en temps réel : la réserve n'augmente jamais pendant la
+   * lecture. On attend donc d'avoir `CUSHION_SECONDS` d'avance avant de lancer
+   * (et de relancer après une coupure) pour absorber les à-coups du réseau.
+   */
+  private playWithCushion(generation: number) {
+    const video = this.video;
+    let waitingForCushion = true;
+
+    const bufferedAhead = () => {
+      const ranges = video.buffered;
+      return ranges.length ? ranges.end(ranges.length - 1) - video.currentTime : 0;
+    };
+
+    const timer = setInterval(() => {
+      if (generation !== this.generation) return clearInterval(timer);
+      if (waitingForCushion && bufferedAhead() >= CUSHION_SECONDS) {
+        waitingForCushion = false;
+        video.play().catch(() => undefined);
+      }
+    }, 200);
+
+    const onWaiting = () => {
+      if (generation !== this.generation) return video.removeEventListener('waiting', onWaiting);
+      if (waitingForCushion) return;
+      waitingForCushion = true;
+      video.pause();
+    };
+    video.addEventListener('waiting', onWaiting);
   }
 
   stop(): void {
