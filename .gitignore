@@ -1,0 +1,14 @@
+node_modules
+dist
+coverage
+*.log
+
+# Secrets locaux (lien M3U, identifiants) : jamais dans le repo
+.env.local
+.env.*.local
+
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea
