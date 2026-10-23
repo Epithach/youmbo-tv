@@ -16,6 +16,8 @@ interface ProgressProps {
   position: number;
   duration: number;
   volume: number;
+  /** Souris : clic sur la barre, à `fraction` (0 à 1) de la durée. */
+  onSeek: (fraction: number) => void;
 }
 
 export function Progress(props: ProgressProps) {
@@ -23,7 +25,13 @@ export function Progress(props: ProgressProps) {
   return (
     <>
       <p class="vod-player__title">{props.title}</p>
-      <div class="vod-player__bar">
+      <div
+        class="vod-player__bar"
+        onClick={(event) => {
+          const box = event.currentTarget.getBoundingClientRect();
+          props.onSeek(Math.min(1, Math.max(0, (event.clientX - box.left) / box.width)));
+        }}
+      >
         <div class="vod-player__progress" style={{ width: `${percent()}%` }} />
       </div>
       <p class="vod-player__time">
@@ -43,6 +51,8 @@ export interface ControlButton<Id extends string> {
 export function ControlBar<Id extends string>(props: {
   buttons: ControlButton<Id>[];
   focused: Id;
+  onFocus: (id: Id) => void;
+  onPress: (id: Id) => void;
 }) {
   return (
     <div class="controls">
@@ -54,6 +64,8 @@ export function ControlBar<Id extends string>(props: {
               'controls__button--focused': button.id === props.focused,
               'controls__button--disabled': button.disabled,
             }}
+            onMouseEnter={() => !button.disabled && props.onFocus(button.id)}
+            onClick={() => !button.disabled && props.onPress(button.id)}
           >
             {button.label}
           </span>
@@ -69,6 +81,7 @@ interface TrackMenuProps {
   focused: number;
   /** Le lecteur ne sait pas changer de piste (navigateur du PC). */
   readOnly: boolean;
+  onChoose: (index: number) => void;
 }
 
 export function TrackMenu(props: TrackMenuProps) {
@@ -80,6 +93,7 @@ export function TrackMenu(props: TrackMenuProps) {
           <div
             class="track-menu__item"
             classList={{ 'track-menu__item--focused': index() === props.focused }}
+            onClick={() => props.onChoose(index())}
           >
             <span class="track-menu__check">{entry.selected ? '✓' : ''}</span>
             {entry.label}

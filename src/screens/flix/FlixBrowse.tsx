@@ -22,6 +22,10 @@ const ROWS_AFTER = 3;
 /** Affiches rendues dans une rangée autour de la sélection. */
 const POSTERS_BEFORE = 2;
 const POSTERS_AFTER = 8;
+/** Affiches sautées par un clic sur les flèches ‹ › d'une rangée. */
+const ARROW_STEP = 5;
+/** Délai minimal entre deux crans de molette pris en compte. */
+const WHEEL_DELAY_MS = 180;
 
 const TABS: { kind: CatalogKind; label: string }[] = [
   { kind: 'movies', label: 'Films' },
@@ -109,16 +113,28 @@ export function FlixBrowse(props: FlixBrowseProps) {
     props.onPositionChange({ ...props.position, ...next });
   const setRow = (value: number) => update({ rows: { ...props.position.rows, [kind()]: value } });
 
+  // Actions communes à la télécommande et à la souris.
+  const selectTab = (tab: CatalogKind, row = props.position.rows[tab]) =>
+    update({ tab, rows: { ...props.position.rows, [tab]: row } });
+  const moveRow = (delta: number) =>
+    setRow(clamp(row() + delta, row() === -1 && delta < 0 ? -1 : 0, catalogRows().length - 1));
+  const setColumn = (catalogRow: CatalogRow, value: number) => {
+    const next = clamp(value, 0, itemsOf(catalogRow).length - 1);
+    update({ columns: { ...props.position.columns, [rowKey(catalogRow)]: next } });
+  };
+  const open = (catalogRow: CatalogRow, index: number) => {
+    const item = itemsOf(catalogRow)[index];
+    if (item) props.onOpen(item);
+  };
+
   useRemote((key) => {
-    const list = catalogRows();
-    const current = list[row()];
+    const current = catalogRows()[row()];
 
     // Barre d'onglets : ← → changent d'onglet, ↓ redescend dans les rangées.
     if (row() === -1) {
       const tab = TABS.findIndex((t) => t.kind === kind());
       if (key === 'left' || key === 'right') {
-        const next = TABS[clamp(tab + (key === 'left' ? -1 : 1), 0, TABS.length - 1)];
-        return update({ tab: next.kind, rows: { ...props.position.rows, [next.kind]: -1 } });
+        return selectTab(TABS[clamp(tab + (key === 'left' ? -1 : 1), 0, TABS.length - 1)].kind, -1);
       }
       if (key === 'down' || key === 'ok') return setRow(0);
       if (key === 'back') return app.navigate('home');
@@ -129,27 +145,29 @@ export function FlixBrowse(props: FlixBrowseProps) {
       case 'up':
         return setRow(row() - 1);
       case 'down':
-        return setRow(clamp(row() + 1, 0, list.length - 1));
+        return moveRow(1);
       case 'left':
-      case 'right': {
-        if (!current) return;
-        const next = clamp(
-          column(current) + (key === 'left' ? -1 : 1),
-          0,
-          itemsOf(current).length - 1,
-        );
-        return update({ columns: { ...props.position.columns, [rowKey(current)]: next } });
-      }
-      case 'ok': {
-        if (!current) return;
-        const item = itemsOf(current)[column(current)];
-        if (item) props.onOpen(item);
+      case 'right':
+        if (current) setColumn(current, column(current) + (key === 'left' ? -1 : 1));
         return;
-      }
+      case 'ok':
+        if (current) open(current, column(current));
+        return;
       case 'back':
         return app.navigate('home');
     }
   });
+
+  // Souris : la molette change de rangée (une rangée par cran, sans emballement).
+  let lastWheel = 0;
+  const onWheel = (event: WheelEvent) => {
+    if (Math.abs(event.deltaY) < Math.abs(event.deltaX)) return;
+    event.preventDefault();
+    const now = Date.now();
+    if (now - lastWheel < WHEEL_DELAY_MS) return;
+    lastWheel = now;
+    moveRow(event.deltaY > 0 ? 1 : -1);
+  };
 
   return (
     <div class="flix">
@@ -158,7 +176,11 @@ export function FlixBrowse(props: FlixBrowseProps) {
         <nav class="flix__tabs" classList={{ 'flix__tabs--active': row() === -1 }}>
           <For each={TABS}>
             {(tab) => (
-              <span class="flix__tab" classList={{ 'flix__tab--selected': tab.kind === kind() }}>
+              <span
+                class="flix__tab"
+                classList={{ 'flix__tab--selected': tab.kind === kind() }}
+                onClick={() => selectTab(tab.kind)}
+              >
                 {tab.label}
               </span>
             )}
@@ -171,7 +193,7 @@ export function FlixBrowse(props: FlixBrowseProps) {
           when={catalogRows().length > 0}
           fallback={<p class="flix__message">Rien de disponible pour ce pays.</p>}
         >
-          <div class="flix__rows">
+          <div class="flix__rows" onWheel={onWheel}>
             <For each={visibleRows()}>
               {({ catalogRow, index }) => (
                 <section class="flix-row" classList={{ 'flix-row--active': index === row() }}>
@@ -180,6 +202,15 @@ export function FlixBrowse(props: FlixBrowseProps) {
                     state={rows()[rowKey(catalogRow)]}
                     selected={column(catalogRow)}
                     active={index === row()}
+                    onOpen={(posterIndex) => {
+                      setRow(index);
+                      setColumn(catalogRow, posterIndex);
+                      open(catalogRow, posterIndex);
+                    }}
+                    onShift={(delta) => {
+                      setRow(index);
+                      setColumn(catalogRow, column(catalogRow) + delta * ARROW_STEP);
+                    }}
                   />
                 </section>
               )}
@@ -191,7 +222,17 @@ export function FlixBrowse(props: FlixBrowseProps) {
   );
 }
 
-function PosterRow(props: { state: RowState | undefined; selected: number; active: boolean }) {
+interface PosterRowProps {
+  state: RowState | undefined;
+  selected: number;
+  active: boolean;
+  /** Souris : clic sur une affiche. */
+  onOpen: (index: number) => void;
+  /** Souris : clic sur ‹ (-1) ou › (+1). */
+  onShift: (direction: -1 | 1) => void;
+}
+
+function PosterRow(props: PosterRowProps) {
   const window = createMemo(() => {
     const state = props.state;
     if (!Array.isArray(state)) return [];
@@ -212,11 +253,20 @@ function PosterRow(props: { state: RowState | undefined; selected: number; activ
     >
       <Show when={window().length > 0} fallback={<p class="flix-row__message">Vide</p>}>
         <div class="flix-row__posters">
+          <button
+            type="button"
+            class="flix-row__arrow flix-row__arrow--left"
+            aria-label="Précédents"
+            onClick={() => props.onShift(-1)}
+          >
+            ‹
+          </button>
           <For each={window()}>
             {({ item, index }) => (
               <figure
                 class="poster"
                 classList={{ 'poster--selected': props.active && index === props.selected }}
+                onClick={() => props.onOpen(index)}
               >
                 <Show
                   when={resizePoster(item.poster, 185)}
@@ -233,6 +283,14 @@ function PosterRow(props: { state: RowState | undefined; selected: number; activ
               </figure>
             )}
           </For>
+          <button
+            type="button"
+            class="flix-row__arrow flix-row__arrow--right"
+            aria-label="Suivants"
+            onClick={() => props.onShift(1)}
+          >
+            ›
+          </button>
         </div>
       </Show>
     </Show>
