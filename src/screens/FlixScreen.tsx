@@ -1,14 +1,13 @@
 import { createSignal, Match, Show, Switch } from 'solid-js';
 import { app } from '../app-state';
 import {
-  displayEpisodeTitle,
-  displayTitle,
   episodeUrl,
   movieUrl,
   type CatalogItem,
   type SeriesEpisode,
   type VodDetails,
-} from '../core/vod';
+} from '../core/catalog';
+import { displayEpisodeTitle, displayTitle } from '../core/catalog-display';
 import type { XtreamCredentials } from '../core/xtream';
 import { useRemote } from '../ui/remote';
 import { FlixBrowse, INITIAL_POSITION, type BrowsePosition } from './flix/FlixBrowse';

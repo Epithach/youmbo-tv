@@ -1,11 +1,6 @@
 import { GENRES, genresIn, isRecentCategory } from './genres';
-import {
-  displayCategoryName,
-  loadCategory,
-  type CatalogItem,
-  type CatalogKind,
-  type VodCategory,
-} from './vod';
+import { loadCategory, type CatalogItem, type CatalogKind, type VodCategory } from './catalog';
+import { displayCategoryName } from './catalog-display';
 import type { XtreamCredentials } from './xtream';
 
 /** Une rangée de YoumboFlix : une catégorie du fournisseur, ou un genre. */

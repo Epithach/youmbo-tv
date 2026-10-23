@@ -1,3 +1,5 @@
+import { keywordPattern, normalize } from './text';
+
 /**
  * Genres de films et séries, reconnus dans le texte du fournisseur
  * (champ `genre` des séries, ou nom de catégorie pour les films), en français
@@ -49,18 +51,9 @@ export const GENRES: Genre[] = [
   { key: 'western', label: 'Western', keywords: ['WESTERN'] },
 ];
 
-function normalize(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toUpperCase();
-}
-
 const MATCHERS = GENRES.map((genre) => ({
   key: genre.key,
-  pattern: new RegExp(
-    `(^|[^A-Z])(${genre.keywords.map((k) => k.replace(/-/g, '\\-')).join('|')})(?![A-Z])`,
-  ),
+  pattern: keywordPattern(genre.keywords),
 }));
 
 /** Genres (clés) cités dans un texte, dans l'ordre de `GENRES`. */

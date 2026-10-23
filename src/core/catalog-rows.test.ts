@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mergeItems } from './catalog-rows';
-import type { CatalogItem } from './vod';
+import type { CatalogItem } from './catalog';
 
 const item = (id: number, added: number): CatalogItem => ({
   kind: 'series',

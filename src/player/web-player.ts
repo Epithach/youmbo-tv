@@ -1,6 +1,6 @@
 import type Hls from 'hls.js';
 import type Mpegts from 'mpegts.js';
-import { describeTrack, probeMkvTracks } from '../core/mkv';
+import { describeTrack, probeMkvTracks, type MediaTrack } from '../core/mkv';
 import { proxify } from '../core/net';
 import {
   detectStreamKind,
@@ -38,6 +38,8 @@ export class WebPlayer implements Player {
   private generation = 0;
   private state: PlayerState = 'idle';
   private url?: string;
+  /** Pistes lues dans l'en-tête du MKV en cours : on ne le télécharge qu'une fois. */
+  private probed?: { url: string; tracks: Promise<MediaTrack[]> };
 
   constructor(
     private readonly video: HTMLVideoElement,
@@ -242,7 +244,11 @@ export class WebPlayer implements Player {
     if (!this.url || !/\.(mkv|webm)(\?|$)/i.test(this.url)) {
       return { options: [], switchable: false };
     }
-    const tracks = await probeMkvTracks(proxify(this.url));
+    const url = this.url;
+    if (this.probed?.url !== url) {
+      this.probed = { url, tracks: probeMkvTracks(proxify(url)).catch(() => []) };
+    }
+    const tracks = await this.probed.tracks;
     const browserAudio = (this.video as VideoWithAudioTracks).audioTracks;
     const audio = tracks.filter((track) => track.kind === 'audio');
     const defaultAudio = audio.find((track) => track.isDefault) ?? audio[0];

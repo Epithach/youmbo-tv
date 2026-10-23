@@ -57,7 +57,7 @@ export function xtreamApiUrl(
   return `${credentials.server}/player_api.php?${params}`;
 }
 
-export function xtreamLiveUrl(credentials: XtreamCredentials, streamId: number): string {
+function xtreamLiveUrl(credentials: XtreamCredentials, streamId: number): string {
   const { server, username, password } = credentials;
   return `${server}/live/${encodeURIComponent(username)}/${encodeURIComponent(password)}/${streamId}.ts`;
 }

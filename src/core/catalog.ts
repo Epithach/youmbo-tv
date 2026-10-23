@@ -1,10 +1,9 @@
-import { ALL_COUNTRIES } from './country';
 import { genresIn } from './genres';
 import { fetchJson } from './net';
 import { xtreamApiUrl, type XtreamCredentials } from './xtream';
 
 /**
- * Films à la demande via l'API Xtream.
+ * Catalogue des films et séries via l'API Xtream : types, chargement et URLs.
  *
  * Le catalogue complet pèse des dizaines de Mo : on ne charge que la liste des
  * catégories, puis chaque catégorie quand elle s'affiche (mise en cache).
@@ -44,142 +43,6 @@ export interface VodInfo {
 export interface VodDetails {
   info: VodInfo;
   movie_data: { stream_id: number; name: string; container_extension: string };
-}
-
-/**
- * Langues des catégories VOD (suffixe `[FR]`, `[EN]`…) proposées pour chaque pays.
- * Les catégories VOD sont classées par langue, pas par pays comme les chaînes.
- */
-const LANGUAGES_BY_COUNTRY: Record<string, string[]> = {
-  FR: ['FR'],
-  BE: ['FR', 'NL'],
-  CH: ['FR', 'DE', 'IT'],
-  LU: ['FR', 'DE'],
-  CA: ['QC', 'FR', 'EN'],
-  GB: ['EN'],
-  IE: ['EN'],
-  US: ['EN'],
-  AU: ['EN'],
-  NZ: ['EN'],
-  ES: ['ES'],
-  MX: ['ES'],
-  AR: ['ES'],
-  CL: ['ES'],
-  CO: ['ES'],
-  PE: ['ES'],
-  LATAM: ['ES'],
-  PT: ['PT'],
-  BR: ['PT'],
-  DE: ['DE'],
-  AT: ['DE'],
-  IT: ['IT'],
-  NL: ['NL'],
-  AL: ['AL', 'ALB'],
-  XK: ['AL', 'ALB'],
-  RS: ['EXYU'],
-  HR: ['EXYU'],
-  BA: ['EXYU'],
-  SI: ['EXYU'],
-  MK: ['EXYU'],
-  ME: ['EXYU'],
-  BALKANS: ['EXYU'],
-  GR: ['GR'],
-  CY: ['GR'],
-  RO: ['RO'],
-  PL: ['PL'],
-  BG: ['BG'],
-  TR: ['TR'],
-  HU: ['HU'],
-  RU: ['RU'],
-  BY: ['RU'],
-  UA: ['RU'],
-  DK: ['DK'],
-  NO: ['NO'],
-  FI: ['FI'],
-  IR: ['IR'],
-  AF: ['IR'],
-  SO: ['SO'],
-  AFRICA: ['AF', 'FR'],
-  SN: ['AF', 'FR'],
-  CM: ['AF', 'FR'],
-  CG: ['AF', 'FR'],
-  ML: ['AF', 'FR'],
-  ARAB: ['AR'],
-  MA: ['AR', 'FR'],
-  DZ: ['AR', 'FR'],
-  TN: ['AR', 'FR'],
-};
-
-/** Langues par défaut quand le pays n'a pas de catalogue dédié. */
-const FALLBACK_LANGUAGES = ['EN', 'MULTISUB'];
-
-const ARAB_COUNTRIES = ['EG', 'LB', 'SY', 'JO', 'PS', 'IQ', 'SA', 'AE', 'QA', 'KW', 'BH', 'OM'];
-for (const code of [...ARAB_COUNTRIES, 'YE', 'LY', 'SD', 'MR']) LANGUAGES_BY_COUNTRY[code] = ['AR'];
-
-/** Langue d'une catégorie : suffixe `[XX]`, ou mention « FRENCH » sans suffixe. */
-export function categoryLanguage(name: string): string | undefined {
-  const suffix = /\[([A-Za-z]+)\]\s*$/.exec(name)?.[1];
-  if (suffix) return suffix.toUpperCase();
-  if (/\b(FRENCH|FRANCAIS|FRANÇAIS)\b/i.test(name)) return 'FR';
-  return undefined;
-}
-
-export function languagesForCountry(country: string): string[] {
-  return LANGUAGES_BY_COUNTRY[country] ?? FALLBACK_LANGUAGES;
-}
-
-/** Catégories à afficher pour un pays, dans l'ordre du fournisseur. */
-export function categoriesForCountry<T extends { category_name: string }>(
-  categories: readonly T[],
-  country: string,
-): T[] {
-  if (country === ALL_COUNTRIES) return [...categories];
-  const languages = languagesForCountry(country);
-  const matching = categories.filter((c) => {
-    const language = categoryLanguage(c.category_name);
-    return language !== undefined && languages.includes(language);
-  });
-  // Aucun catalogue dans la langue du pays : on se rabat sur l'anglais.
-  if (matching.length > 0) return matching;
-  return categories.filter((c) =>
-    FALLBACK_LANGUAGES.includes(categoryLanguage(c.category_name) ?? ''),
-  );
-}
-
-/** Nom de catégorie lisible : `VOD - ACTION [FR]` → `Action`. */
-export function displayCategoryName(name: string): string {
-  const cleaned = name
-    .replace(/^\s*(VOD|SRS)\s*-\s*/i, '')
-    .replace(/\s*\[[A-Za-z]+\]\s*$/, '')
-    .trim();
-  if (!cleaned) return name;
-  // Majuscule à chaque mot : « CRIME-THRILLER » → « Crime-Thriller ».
-  const titled = cleaned
-    .toLowerCase()
-    .replace(/(^|[\s\-/])(\S)/g, (_m, sep: string, c: string) => sep + c.toUpperCase());
-  const rename = CATEGORY_RENAMES.find(([pattern]) => pattern.test(titled));
-  return rename ? titled.replace(rename[0], rename[1]) : titled;
-}
-
-/** Noms de catégories du fournisseur à traduire ou corriger. */
-const CATEGORY_RENAMES: [RegExp, string][] = [
-  [/^Others?$/, 'Autres'],
-  [/^Récemment Ajout(er|és?)$/, 'Récemment ajoutés'],
-  [/^Series (\d{4})$/, 'Séries $1'],
-];
-
-/** Titre sans le préfixe de langue : `FR - The Fall (2008)` → `The Fall (2008)`. */
-export function displayTitle(name: string): string {
-  return name.replace(/^\s*[A-Z]{2,5}\s*[-|:]\s*/, '').trim() || name;
-}
-
-/**
- * Les affiches TMDB arrivent en 600×900 : on demande une taille adaptée,
- * bien plus légère pour les rangées (et pour la mémoire de la TV).
- */
-export function resizePoster(url: string | undefined, width: 185 | 342 | 500 | 780 | 1280) {
-  if (!url) return undefined;
-  return url.replace(/(image\.tmdb\.org\/t\/p\/)[^/]+\//, `$1w${width}/`);
 }
 
 function streamUrl(
@@ -248,20 +111,6 @@ export function seasonsOf(details: SeriesDetails): { number: number; episodes: S
     }))
     .filter((season) => season.episodes.length > 0)
     .sort((a, b) => a.number - b.number);
-}
-
-/** Titre d'épisode lisible : `FR - Série (2018) - S01E01 - Pilote` → `Pilote`. */
-export function displayEpisodeTitle(episode: SeriesEpisode): string {
-  const parts = episode.title.split(/\s+-\s+/);
-  const marker = parts.findIndex((part) => /^S\d+E\d+$/i.test(part.trim()));
-  const title =
-    marker >= 0
-      ? parts
-          .slice(marker + 1)
-          .join(' - ')
-          .trim()
-      : '';
-  return title || `Épisode ${episode.episode_num}`;
 }
 
 /* --- Catalogue commun aux films et aux séries --- */

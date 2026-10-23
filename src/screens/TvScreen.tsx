@@ -23,10 +23,20 @@ export function TvScreen() {
   const [fullscreen, setFullscreen] = createSignal(false);
 
   const groups = createMemo(() => [ALL_GROUPS, ...(app.country()?.groups ?? [])]);
+  // Chaînes rangées par catégorie une seule fois, pas à chaque changement de catégorie.
+  const channelsByGroup = createMemo(() => {
+    const byGroup = new Map<string, Channel[]>();
+    for (const channel of app.country()?.channels ?? []) {
+      const list = byGroup.get(channel.group);
+      if (list) list.push(channel);
+      else byGroup.set(channel.group, [channel]);
+    }
+    return byGroup;
+  });
   const channels = createMemo(() => {
-    const all = app.country()?.channels ?? [];
     const group = groups()[groupIndex()];
-    return group === ALL_GROUPS ? all : all.filter((channel) => channel.group === group);
+    if (group === ALL_GROUPS) return app.country()?.channels ?? [];
+    return channelsByGroup().get(group) ?? [];
   });
 
   let video: HTMLVideoElement | undefined;

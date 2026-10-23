@@ -1,4 +1,5 @@
 import type { Channel, Playlist } from './m3u';
+import { keywordPattern, normalize } from './text';
 
 /**
  * Classement des catégories par pays.
@@ -212,35 +213,18 @@ const CHANNEL_PREFIXES: Record<string, string> = {
 /** Part minimale des chaînes d'une catégorie qui doivent partager le même préfixe. */
 const CHANNEL_PREFIX_MAJORITY = 0.8;
 
-function normalize(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toUpperCase();
-}
-
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 const keywordToCode = new Map<string, string>();
 for (const [code, definition] of Object.entries(COUNTRIES)) {
   for (const keyword of definition.keywords ?? []) keywordToCode.set(keyword, code);
 }
 
-// Mots-clés les plus longs d'abord, pour que « SOUTH KOREA » passe avant « KOREA ».
-const KEYWORDS = new RegExp(
-  `(?:^|[^A-Z0-9])(${[...keywordToCode.keys()]
-    .sort((a, b) => b.length - a.length)
-    .map(escapeRegExp)
-    .join('|')})(?![A-Z0-9])`,
-);
+const KEYWORDS = keywordPattern([...keywordToCode.keys()]);
 
 const CATEGORY_PREFIX = /^\s*[|[]\s*([A-Z0-9]{2,4})\s*[|\]]\s*/;
 const CHANNEL_PREFIX = /^\s*(?:[|[]\s*([A-Z0-9]{2,4})\s*[|\]]|([A-Z]{2,4})\s*[-:|])/;
 
 /** Pays d'une catégorie d'après son nom seul, ou `undefined` si rien de concluant. */
-export function countryFromCategory(category: string): string | undefined {
+function countryFromCategory(category: string): string | undefined {
   const name = normalize(category);
   const prefix = CATEGORY_PREFIX.exec(name)?.[1];
   // Les parenthèses précisent une variante (`BEIN SPORTS (UK)`), pas le pays de la catégorie.
@@ -284,7 +268,7 @@ export function detectCountry(category: string, channels: readonly Channel[]): s
   );
 }
 
-export function countryName(code: string): string {
+function countryName(code: string): string {
   return COUNTRIES[code]?.name ?? code;
 }
 
