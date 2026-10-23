@@ -940,3 +940,33 @@ body {
   font-size: 15px;
   font-weight: 400;
 }
+
+/* --- Recherche --- */
+
+.search {
+  max-width: 1100px;
+}
+
+.search__input {
+  width: 100%;
+  font-size: 24px;
+}
+
+.search__status {
+  margin-top: 12px;
+  min-height: 24px;
+}
+
+.search__type {
+  flex: none;
+  width: 64px;
+  margin-right: 12px;
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.list__row--selected .search__type {
+  color: inherit;
+}

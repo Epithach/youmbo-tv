@@ -12,6 +12,7 @@ export function HomeScreen() {
       disabled: !app.xtream(),
       onPress: () => app.navigate('flix'),
     },
+    { label: 'Recherche', detail: 'Chaînes, films, séries', onPress: () => app.navigate('search') },
     { label: 'Paramètres', detail: app.country()?.name, onPress: () => app.navigate('settings') },
   ];
   const selection = createSelection(() => items.length);

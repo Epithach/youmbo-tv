@@ -1,12 +1,17 @@
 import { createMemo, createRoot, createSignal } from 'solid-js';
 import { ALL_COUNTRIES, indexByCountry, type CountryEntry } from './core/country';
-import type { Playlist } from './core/m3u';
+import type { CatalogItem } from './core/catalog';
+import type { Channel, Playlist } from './core/m3u';
 import { fetchDevPlaylistUrl } from './core/net';
 import { loadPlaylistFrom } from './core/playlist-source';
 import { loadCountry, loadPlaylistUrl, saveCountry, savePlaylistUrl } from './core/storage';
 import { parseXtreamUrl } from './core/xtream';
 
-export type Screen = 'boot' | 'setup' | 'country' | 'home' | 'settings' | 'tv' | 'flix';
+export type Screen = 'boot' | 'setup' | 'country' | 'home' | 'settings' | 'tv' | 'flix' | 'search';
+
+/** Ce qu'un écran doit ouvrir en arrivant (résultat choisi dans la recherche). */
+export type PendingOpen =
+  { kind: 'channel'; channel: Channel } | { kind: 'catalog'; item: CatalogItem };
 
 /**
  * État global de l'app : réglages (lien, pays), playlist chargée et écran courant.
@@ -25,6 +30,7 @@ function createAppState() {
   const [suggestedUrl, setSuggestedUrl] = createSignal<string>();
   /** Écran où revenir après une modification depuis les paramètres. */
   const [returnTo, setReturnTo] = createSignal<Screen>();
+  const [pending, setPending] = createSignal<PendingOpen>();
 
   const countries = createMemo<CountryEntry[]>(() => {
     const current = playlist();
@@ -103,9 +109,25 @@ function createAppState() {
     setScreen('setup');
   }
 
+  /** Ouvre un résultat de recherche : la TV pour une chaîne, YoumboFlix pour un titre. */
+  function openResult(target: PendingOpen) {
+    setPending(target);
+    setScreen(target.kind === 'channel' ? 'tv' : 'flix');
+  }
+
+  /** L'écran d'arrivée récupère (une seule fois) ce qu'il doit ouvrir. */
+  function takePending<K extends PendingOpen['kind']>(kind: K) {
+    const target = pending();
+    if (target?.kind !== kind) return undefined;
+    setPending(undefined);
+    return target as Extract<PendingOpen, { kind: K }>;
+  }
+
   return {
     screen,
     navigate: setScreen,
+    openResult,
+    takePending,
     playlist,
     playlistUrl,
     countries,
