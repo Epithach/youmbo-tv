@@ -27,7 +27,13 @@ function toRemoteKey(event: KeyboardEvent): RemoteKey | undefined {
 export function useRemote(handler: (key: RemoteKey) => void) {
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.target instanceof HTMLInputElement) {
+      // ↑ ↓ ne servent pas à la saisie : on les laisse sortir du champ (recherche).
+      const key = event.keyCode === 38 ? 'up' : event.keyCode === 40 ? 'down' : undefined;
       if (event.keyCode === 27 || event.keyCode === 10009) handler('back');
+      else if (key) {
+        event.preventDefault();
+        handler(key);
+      }
       return;
     }
     const key = toRemoteKey(event);

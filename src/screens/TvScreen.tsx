@@ -128,6 +128,13 @@ export function TvScreen() {
         setPlayerMessage(message);
       },
     });
+    // Arrivée depuis la recherche : on lance la chaîne choisie.
+    const fromSearch = app.takePending('channel');
+    if (fromSearch) {
+      const index = channels().findIndex((c) => c.id === fromSearch.channel.id);
+      if (index >= 0) setChannelIndex(index);
+      playChannel(fromSearch.channel);
+    }
   });
 
   // Quitter l'écran coupe le flux : l'abonnement n'autorise souvent qu'une connexion.

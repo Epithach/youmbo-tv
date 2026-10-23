@@ -45,7 +45,7 @@ export function libraryRows(kind: CatalogKind): CatalogRow[] {
 const CONCURRENCY = 2;
 
 /** Charge toutes les catégories ; `complete` est faux si certaines ont échoué. */
-async function loadAll(
+export async function loadAll(
   credentials: XtreamCredentials,
   kind: CatalogKind,
   categories: readonly VodCategory[],

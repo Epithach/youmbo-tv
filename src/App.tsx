@@ -3,6 +3,7 @@ import { app } from './app-state';
 import { CountryScreen } from './screens/CountryScreen';
 import { FlixScreen } from './screens/FlixScreen';
 import { HomeScreen } from './screens/HomeScreen';
+import { SearchScreen } from './screens/SearchScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { SetupScreen } from './screens/SetupScreen';
 import { TvScreen } from './screens/TvScreen';
@@ -31,6 +32,9 @@ export function App() {
         </Match>
         <Match when={app.screen() === 'flix'}>
           <FlixScreen />
+        </Match>
+        <Match when={app.screen() === 'search'}>
+          <SearchScreen />
         </Match>
       </Switch>
     </div>

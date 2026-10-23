@@ -1,4 +1,4 @@
-import { createSignal, Match, Show, Switch } from 'solid-js';
+import { createSignal, Match, onMount, Show, Switch } from 'solid-js';
 import { app } from '../app-state';
 import {
   episodeUrl,
@@ -41,6 +41,15 @@ export function FlixScreen() {
   const [seriesPosition, setSeriesPosition] = createSignal<SeriesPosition>({
     season: 0,
     episode: 0,
+  });
+
+  // Arrivée depuis la recherche : on ouvre directement la fiche.
+  onMount(() => {
+    const fromSearch = app.takePending('catalog');
+    if (fromSearch) {
+      setBrowse({ ...browse(), tab: fromSearch.item.kind });
+      open(fromSearch.item);
+    }
   });
 
   const open = (item: CatalogItem) => {
