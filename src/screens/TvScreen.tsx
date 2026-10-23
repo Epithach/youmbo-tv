@@ -6,6 +6,7 @@ import { createPlayer, type Player, type PlayerState } from '../player';
 import { Marquee } from '../ui/Marquee';
 import { clamp, useRemote } from '../ui/remote';
 import { WindowedList } from '../ui/WindowedList';
+import { ChannelInfo } from './tv/ChannelInfo';
 
 const ALL_GROUPS = 'Toutes les chaînes';
 const VISIBLE_ROWS = 14;
@@ -38,6 +39,12 @@ export function TvScreen() {
     if (group === ALL_GROUPS) return app.country()?.channels ?? [];
     return channelsByGroup().get(group) ?? [];
   });
+
+  /** Chaîne décrite sous la vidéo : la chaîne sélectionnée dans la liste, sinon celle qui joue. */
+  const infoChannel = () =>
+    column() === 'channels'
+      ? (channels()[channelIndex()] ?? playing())
+      : (playing() ?? channels()[channelIndex()]);
 
   let video: HTMLVideoElement | undefined;
   let player: Player | undefined;
@@ -154,18 +161,23 @@ export function TvScreen() {
       </section>
 
       <section class="stage">
-        <video ref={(el) => (video = el)} class="stage__video" />
-        <Switch>
-          <Match when={!playing()}>
-            <p class="stage__overlay">Choisis une chaîne et appuie sur OK</p>
-          </Match>
-          <Match when={playerState() === 'loading'}>
-            <p class="stage__overlay">Chargement de {playing()?.name}…</p>
-          </Match>
-          <Match when={playerState() === 'error'}>
-            <p class="stage__overlay stage__overlay--error">{playerMessage()}</p>
-          </Match>
-        </Switch>
+        <div class="stage__screen">
+          <video ref={(el) => (video = el)} class="stage__video" />
+          <Switch>
+            <Match when={!playing()}>
+              <p class="stage__overlay">Choisis une chaîne et appuie sur OK</p>
+            </Match>
+            <Match when={playerState() === 'loading'}>
+              <p class="stage__overlay">Chargement de {playing()?.name}…</p>
+            </Match>
+            <Match when={playerState() === 'error'}>
+              <p class="stage__overlay stage__overlay--error">{playerMessage()}</p>
+            </Match>
+          </Switch>
+        </div>
+        <Show when={!fullscreen()}>
+          <ChannelInfo channel={infoChannel()} />
+        </Show>
       </section>
     </div>
   );

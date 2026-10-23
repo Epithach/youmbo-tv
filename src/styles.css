@@ -295,6 +295,8 @@ body {
 
 .stage {
   position: relative;
+  display: flex;
+  flex-direction: column;
   flex: 1;
   background: #000;
 }
@@ -831,4 +833,65 @@ body {
 .controls__button:hover,
 .track-menu__item:hover {
   background: var(--surface-active);
+}
+
+/* --- Programme TV (sous la vidéo) --- */
+
+.stage__screen {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.channel-info {
+  flex: none;
+  padding: 20px 28px 24px;
+  background: var(--surface);
+}
+
+.channel-info__name {
+  margin: 0 0 10px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.channel-info__line {
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.channel-info__time {
+  margin-right: 12px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.channel-info__bar {
+  height: 4px;
+  margin: 10px 0;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.channel-info__progress {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.channel-info__description {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0 0 10px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--text-muted);
+  font-size: 17px;
+}
+
+.channel-info__muted {
+  margin: 0;
+  color: var(--text-muted);
 }
