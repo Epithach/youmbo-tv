@@ -1,4 +1,5 @@
 import { ALL_COUNTRIES } from './country';
+import { genresIn } from './genres';
 import { fetchJson } from './net';
 import { xtreamApiUrl, type XtreamCredentials } from './xtream';
 
@@ -153,10 +154,19 @@ export function displayCategoryName(name: string): string {
     .trim();
   if (!cleaned) return name;
   // Majuscule à chaque mot : « CRIME-THRILLER » → « Crime-Thriller ».
-  return cleaned
+  const titled = cleaned
     .toLowerCase()
     .replace(/(^|[\s\-/])(\S)/g, (_m, sep: string, c: string) => sep + c.toUpperCase());
+  const rename = CATEGORY_RENAMES.find(([pattern]) => pattern.test(titled));
+  return rename ? titled.replace(rename[0], rename[1]) : titled;
 }
+
+/** Noms de catégories du fournisseur à traduire ou corriger. */
+const CATEGORY_RENAMES: [RegExp, string][] = [
+  [/^Others?$/, 'Autres'],
+  [/^Récemment Ajout(er|és?)$/, 'Récemment ajoutés'],
+  [/^Series (\d{4})$/, 'Séries $1'],
+];
 
 /** Titre sans le préfixe de langue : `FR - The Fall (2008)` → `The Fall (2008)`. */
 export function displayTitle(name: string): string {
@@ -200,6 +210,9 @@ export interface SeriesItem {
   cover?: string;
   rating?: string | number;
   category_id: string;
+  /** Ex. « Animation, Action & Adventure ». */
+  genre?: string;
+  last_modified?: string;
 }
 
 export interface SeriesEpisode {
@@ -264,6 +277,12 @@ export interface CatalogItem {
   rating?: string | number;
   /** Films : extension du fichier (mkv, mp4…). */
   extension?: string;
+  /** Catégorie du fournisseur d'où vient le titre. */
+  categoryId: string;
+  /** Genres connus (clés de `GENRES`) : seulement pour les séries. */
+  genres: string[];
+  /** Date d'ajout ou de mise à jour (secondes), pour trier les plus récents. */
+  added: number;
 }
 
 const ACTIONS: Record<CatalogKind, { categories: string; items: string }> = {
@@ -281,6 +300,9 @@ function toCatalogItem(kind: CatalogKind, raw: VodItem | SeriesItem): CatalogIte
       poster: movie.stream_icon,
       rating: movie.rating,
       extension: movie.container_extension,
+      categoryId: String(movie.category_id),
+      genres: [],
+      added: Number(movie.added) || 0,
     };
   }
   const series = raw as SeriesItem;
@@ -290,6 +312,9 @@ function toCatalogItem(kind: CatalogKind, raw: VodItem | SeriesItem): CatalogIte
     name: series.name,
     poster: series.cover,
     rating: series.rating,
+    categoryId: String(series.category_id),
+    genres: genresIn(series.genre),
+    added: Number(series.last_modified) || 0,
   };
 }
 

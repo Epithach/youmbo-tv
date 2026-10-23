@@ -213,7 +213,10 @@ const CHANNEL_PREFIXES: Record<string, string> = {
 const CHANNEL_PREFIX_MAJORITY = 0.8;
 
 function normalize(text: string): string {
-  return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
 }
 
 function escapeRegExp(text: string): string {

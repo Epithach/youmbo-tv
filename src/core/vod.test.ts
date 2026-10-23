@@ -140,3 +140,13 @@ describe('séries', () => {
     );
   });
 });
+
+describe('noms de catégories traduits', () => {
+  it.each([
+    ['VOD - OTHERS [FR]', 'Autres'],
+    ['VOD - RÉCEMMENT AJOUTER [FR]', 'Récemment ajoutés'],
+    ['SRS - SERIES 2026 [FR]', 'Séries 2026'],
+  ])('%s → %s', (name, shown) => {
+    expect(displayCategoryName(name)).toBe(shown);
+  });
+});
