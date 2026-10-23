@@ -1,14 +1,16 @@
 import { createResource, createSignal, Show } from 'solid-js';
 import { loadVodDetails, type CatalogItem, type VodDetails } from '../../core/catalog';
 import { displayTitle, resizePoster } from '../../core/catalog-display';
+import { library, progressKey } from '../../core/library';
 import type { XtreamCredentials } from '../../core/xtream';
 import { Menu, pressMenuItem, type MenuItem } from '../../ui/Menu';
-import { useRemote } from '../../ui/remote';
+import { clamp, useRemote } from '../../ui/remote';
+import { formatTime } from './PlayerControls';
 
 interface MovieDetailProps {
   credentials: XtreamCredentials;
   item: CatalogItem;
-  onPlay: (item: CatalogItem, details: VodDetails | undefined) => void;
+  onPlay: (item: CatalogItem, details: VodDetails | undefined, fromStart: boolean) => void;
   onBack: () => void;
 }
 
@@ -31,15 +33,28 @@ export function MovieDetail(props: MovieDetailProps) {
   const facts = () =>
     [year(), info()?.genre, info()?.duration, rating()].filter(Boolean).join(' · ');
 
-  const items: MenuItem[] = [
-    { label: 'Lecture', onPress: () => props.onPlay(props.item, details()) },
+  const resumeAt = () => library.resumePosition(progressKey('movie', props.item.id));
+  const items = (): MenuItem[] => [
+    ...(resumeAt()
+      ? [
+          {
+            label: `Reprendre à ${formatTime(resumeAt()!)}`,
+            onPress: () => props.onPlay(props.item, details(), false),
+          },
+          { label: 'Depuis le début', onPress: () => props.onPlay(props.item, details(), true) },
+        ]
+      : [{ label: 'Lecture', onPress: () => props.onPlay(props.item, details(), true) }]),
+    {
+      label: library.isFavorite(props.item) ? '♥ Dans ma liste' : '♡ Ma liste',
+      onPress: () => library.toggleFavorite(props.item),
+    },
     { label: 'Retour', onPress: () => props.onBack() },
   ];
 
   useRemote((key) => {
-    if (key === 'left') setSelected(0);
-    else if (key === 'right') setSelected(1);
-    else if (key === 'ok') pressMenuItem(items, selected());
+    if (key === 'left' || key === 'right') {
+      setSelected(clamp(selected() + (key === 'left' ? -1 : 1), 0, items().length - 1));
+    } else if (key === 'ok') pressMenuItem(items(), selected());
     else if (key === 'back') props.onBack();
   });
 
@@ -71,7 +86,7 @@ export function MovieDetail(props: MovieDetailProps) {
               <p class="detail__credits">Avec : {info()?.cast || info()?.actors}</p>
             </Show>
           </Show>
-          <Menu items={items} selected={selected()} onSelect={setSelected} direction="row" />
+          <Menu items={items()} selected={selected()} onSelect={setSelected} direction="row" />
         </div>
       </div>
     </div>

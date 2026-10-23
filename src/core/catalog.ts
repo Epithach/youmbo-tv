@@ -132,6 +132,8 @@ export interface CatalogItem {
   genres: string[];
   /** Date d'ajout ou de mise à jour (secondes), pour trier les plus récents. */
   added: number;
+  /** « Continuer à regarder » : avancement (0 à 1), affiché sous l'affiche. */
+  progress?: number;
 }
 
 const ACTIONS: Record<CatalogKind, { categories: string; items: string }> = {

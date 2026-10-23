@@ -1,4 +1,5 @@
 import { createSignal, onCleanup, onMount, Show } from 'solid-js';
+import { library, type WatchProgress } from '../../core/library';
 import { loadVolume, saveVolume } from '../../core/storage';
 import {
   createPlayer,
@@ -16,7 +17,14 @@ interface VodPlayerProps {
   onExit: () => void;
   /** Fin de la vidéo : enchaîne sur l'épisode suivant s'il y en a un. */
   onEnded?: () => void;
+  /** Pour « Continuer à regarder » : ce qui est enregistré avec la position. */
+  progress?: Omit<WatchProgress, 'position' | 'duration' | 'updatedAt'>;
+  /** Reprendre à cette position (secondes). */
+  startAt?: number;
 }
+
+/** Fréquence d'enregistrement de la position de lecture. */
+const SAVE_EVERY_MS = 10_000;
 
 /** Délai de lecture avant de vérifier que l'image et le son sont bien décodés. */
 const CODEC_CHECK_SECONDS = 5;
@@ -95,8 +103,29 @@ export function VodPlayer(props: VodPlayerProps) {
     player.play(props.url);
     void refreshTracks();
     showControls();
-    video!.addEventListener('ended', () => (props.onEnded ?? props.onExit)());
+    video!.addEventListener('ended', () => {
+      saveProgress();
+      (props.onEnded ?? props.onExit)();
+    });
+    // Reprise : on se place au bon endroit dès que la durée est connue.
+    if (props.startAt) {
+      const startAt = props.startAt;
+      video!.addEventListener('loadedmetadata', () => player?.seekBy(startAt - player.position()), {
+        once: true,
+      });
+    }
   });
+
+  let lastSave = Date.now();
+  const saveProgress = () => {
+    if (!player || !props.progress || player.duration() <= 0) return;
+    lastSave = Date.now();
+    library.saveProgress({
+      ...props.progress,
+      position: player.position(),
+      duration: player.duration(),
+    });
+  };
 
   const tick = setInterval(() => {
     if (!player) return;
@@ -107,9 +136,11 @@ export function VodPlayer(props: VodPlayerProps) {
       codecChecked = true;
       setFormatWarning(unsupportedFormat(video));
     }
+    if (!player.paused() && Date.now() - lastSave >= SAVE_EVERY_MS) saveProgress();
   }, 500);
 
   onCleanup(() => {
+    saveProgress();
     clearInterval(tick);
     clearTimeout(hideTimer);
     player?.destroy();

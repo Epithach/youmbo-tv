@@ -36,3 +36,16 @@ export const saveVolume = (volume: number) => write(VOLUME_KEY, String(volume));
 /** Dernier pays choisi dans le menu. */
 export const loadCountry = () => read(COUNTRY_KEY);
 export const saveCountry = (code: string) => write(COUNTRY_KEY, code);
+
+/** Données structurées (favoris, reprises…) ; `fallback` si absentes ou illisibles. */
+export function loadJson<T>(key: string, fallback: T): T {
+  const raw = read(key);
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+export const saveJson = (key: string, value: unknown) => write(key, JSON.stringify(value));
