@@ -578,3 +578,32 @@ body {
   color: #ffd27a;
   transform: translateX(-50%);
 }
+
+/* --- Fiche série --- */
+
+.detail__plot--short {
+  -webkit-line-clamp: 3;
+}
+
+.seasons {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 16px 0 12px;
+}
+
+.seasons__item {
+  margin: 0 12px 8px 0;
+  padding: 8px 18px;
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.seasons__item--selected {
+  background: var(--accent);
+  color: #fff;
+}
+
+.detail .list {
+  max-width: 760px;
+}

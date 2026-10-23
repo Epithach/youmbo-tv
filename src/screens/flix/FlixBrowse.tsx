@@ -12,11 +12,12 @@ import {
   categoriesForCountry,
   displayCategoryName,
   displayTitle,
-  loadVodCategories,
-  loadVodCategory,
+  loadCategories,
+  loadCategory,
   resizePoster,
+  type CatalogItem,
+  type CatalogKind,
   type VodCategory,
-  type VodItem,
 } from '../../core/vod';
 import type { XtreamCredentials } from '../../core/xtream';
 import { clamp, useRemote } from '../../ui/remote';
@@ -28,46 +29,63 @@ const ROWS_AFTER = 3;
 const POSTERS_BEFORE = 2;
 const POSTERS_AFTER = 8;
 
-export const FLIX_TABS = ['Films', 'Séries'] as const;
+const TABS: { kind: CatalogKind; label: string }[] = [
+  { kind: 'movies', label: 'Films' },
+  { kind: 'series', label: 'Séries' },
+];
 
 /** Position dans l'accueil YoumboFlix, conservée quand on ouvre une fiche. */
 export interface BrowsePosition {
-  /** -1 : barre d'onglets. */
-  row: number;
+  tab: CatalogKind;
+  /** Rangée sélectionnée par onglet ; -1 : barre d'onglets. */
+  rows: Record<CatalogKind, number>;
+  /** Affiche sélectionnée par rangée (`kind|category_id`). */
   columns: Record<string, number>;
 }
+
+export const INITIAL_POSITION: BrowsePosition = {
+  tab: 'movies',
+  rows: { movies: 0, series: 0 },
+  columns: {},
+};
 
 interface FlixBrowseProps {
   credentials: XtreamCredentials;
   position: BrowsePosition;
   onPositionChange: (position: BrowsePosition) => void;
-  onOpenMovie: (item: VodItem) => void;
+  onOpen: (item: CatalogItem) => void;
 }
 
-type RowState = VodItem[] | 'loading' | 'error';
+type RowState = CatalogItem[] | 'loading' | 'error';
 
 /**
  * Accueil « à la Netflix » : une rangée d'affiches par catégorie, dans la
  * langue du pays choisi. Chaque rangée n'est chargée qu'à l'approche.
  */
 export function FlixBrowse(props: FlixBrowseProps) {
-  const [allCategories] = createResource(() => loadVodCategories(props.credentials));
+  const kind = () => props.position.tab;
+  const [allCategories] = createResource(kind, (current) =>
+    loadCategories(props.credentials, current),
+  );
   const categories = createMemo<VodCategory[]>(() =>
     categoriesForCountry(allCategories() ?? [], app.country()?.code ?? ''),
   );
   const [rows, setRows] = createSignal<Record<string, RowState>>({});
 
+  const rowKey = (category: VodCategory) => `${kind()}|${category.category_id}`;
+
   const ensureLoaded = (category: VodCategory) => {
-    if (untrack(rows)[category.category_id]) return;
-    setRows((current) => ({ ...current, [category.category_id]: 'loading' }));
-    loadVodCategory(props.credentials, category.category_id).then(
-      (items) => setRows((current) => ({ ...current, [category.category_id]: items })),
-      () => setRows((current) => ({ ...current, [category.category_id]: 'error' })),
+    const key = rowKey(category);
+    if (untrack(rows)[key]) return;
+    setRows((current) => ({ ...current, [key]: 'loading' }));
+    loadCategory(props.credentials, kind(), category.category_id).then(
+      (items) => setRows((current) => ({ ...current, [key]: items })),
+      () => setRows((current) => ({ ...current, [key]: 'error' })),
     );
   };
 
-  const row = () => props.position.row;
-  const column = (category: VodCategory) => props.position.columns[category.category_id] ?? 0;
+  const row = () => props.position.rows[kind()];
+  const column = (category: VodCategory) => props.position.columns[rowKey(category)] ?? 0;
 
   const visibleRows = createMemo(() => {
     const list = categories();
@@ -81,33 +99,50 @@ export function FlixBrowse(props: FlixBrowseProps) {
     for (const { category } of visibleRows()) ensureLoaded(category);
   });
 
-  const itemsOf = (category: VodCategory): VodItem[] => {
-    const state = rows()[category.category_id];
+  const itemsOf = (category: VodCategory): CatalogItem[] => {
+    const state = rows()[rowKey(category)];
     return Array.isArray(state) ? state : [];
   };
 
-  const setPosition = (next: Partial<BrowsePosition>) =>
+  const update = (next: Partial<BrowsePosition>) =>
     props.onPositionChange({ ...props.position, ...next });
+  const setRow = (value: number) => update({ rows: { ...props.position.rows, [kind()]: value } });
 
   useRemote((key) => {
     const list = categories();
     const current = list[row()];
+
+    // Barre d'onglets : ← → changent d'onglet, ↓ redescend dans les rangées.
+    if (row() === -1) {
+      const tab = TABS.findIndex((t) => t.kind === kind());
+      if (key === 'left' || key === 'right') {
+        const next = TABS[clamp(tab + (key === 'left' ? -1 : 1), 0, TABS.length - 1)];
+        return update({ tab: next.kind, rows: { ...props.position.rows, [next.kind]: -1 } });
+      }
+      if (key === 'down' || key === 'ok') return setRow(0);
+      if (key === 'back') return app.navigate('home');
+      return;
+    }
+
     switch (key) {
       case 'up':
-        return setPosition({ row: Math.max(-1, row() - 1) });
+        return setRow(row() - 1);
       case 'down':
-        return setPosition({ row: clamp(row() + 1, -1, list.length - 1) });
+        return setRow(clamp(row() + 1, 0, list.length - 1));
       case 'left':
       case 'right': {
         if (!current) return;
-        const items = itemsOf(current);
-        const next = clamp(column(current) + (key === 'left' ? -1 : 1), 0, items.length - 1);
-        return setPosition({ columns: { ...props.position.columns, [current.category_id]: next } });
+        const next = clamp(
+          column(current) + (key === 'left' ? -1 : 1),
+          0,
+          itemsOf(current).length - 1,
+        );
+        return update({ columns: { ...props.position.columns, [rowKey(current)]: next } });
       }
       case 'ok': {
         if (!current) return;
         const item = itemsOf(current)[column(current)];
-        if (item) props.onOpenMovie(item);
+        if (item) props.onOpen(item);
         return;
       }
       case 'back':
@@ -120,13 +155,10 @@ export function FlixBrowse(props: FlixBrowseProps) {
       <header class="flix__header">
         <span class="flix__brand">YoumboFlix</span>
         <nav class="flix__tabs" classList={{ 'flix__tabs--active': row() === -1 }}>
-          <For each={FLIX_TABS}>
-            {(tab, index) => (
-              <span class="flix__tab" classList={{ 'flix__tab--selected': index() === 0 }}>
-                {tab}
-                <Show when={index() === 1}>
-                  <small class="flix__soon"> bientôt</small>
-                </Show>
+          <For each={TABS}>
+            {(tab) => (
+              <span class="flix__tab" classList={{ 'flix__tab--selected': tab.kind === kind() }}>
+                {tab.label}
               </span>
             )}
           </For>
@@ -136,7 +168,7 @@ export function FlixBrowse(props: FlixBrowseProps) {
       <Show when={!allCategories.loading} fallback={<p class="flix__message">Chargement…</p>}>
         <Show
           when={categories().length > 0}
-          fallback={<p class="flix__message">Aucun film disponible pour ce pays.</p>}
+          fallback={<p class="flix__message">Rien de disponible pour ce pays.</p>}
         >
           <div class="flix__rows">
             <For each={visibleRows()}>
@@ -144,7 +176,7 @@ export function FlixBrowse(props: FlixBrowseProps) {
                 <section class="flix-row" classList={{ 'flix-row--active': index === row() }}>
                   <h2 class="flix-row__title">{displayCategoryName(category.category_name)}</h2>
                   <PosterRow
-                    state={rows()[category.category_id]}
+                    state={rows()[rowKey(category)]}
                     selected={column(category)}
                     active={index === row()}
                   />
@@ -177,7 +209,7 @@ function PosterRow(props: { state: RowState | undefined; selected: number; activ
         </p>
       }
     >
-      <Show when={window().length > 0} fallback={<p class="flix-row__message">Aucun film</p>}>
+      <Show when={window().length > 0} fallback={<p class="flix-row__message">Vide</p>}>
         <div class="flix-row__posters">
           <For each={window()}>
             {({ item, index }) => (
@@ -186,7 +218,7 @@ function PosterRow(props: { state: RowState | undefined; selected: number; activ
                 classList={{ 'poster--selected': props.active && index === props.selected }}
               >
                 <Show
-                  when={resizePoster(item.stream_icon, 185)}
+                  when={resizePoster(item.poster, 185)}
                   fallback={<div class="poster__placeholder">{displayTitle(item.name)}</div>}
                 >
                   {(src) => <img class="poster__image" src={src()} alt="" loading="lazy" />}

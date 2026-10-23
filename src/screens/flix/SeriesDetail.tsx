@@ -1,0 +1,132 @@
+import { createMemo, createResource, For, Show } from 'solid-js';
+import {
+  displayEpisodeTitle,
+  displayTitle,
+  loadSeriesDetails,
+  resizePoster,
+  seasonsOf,
+  type CatalogItem,
+  type SeriesEpisode,
+} from '../../core/vod';
+import type { XtreamCredentials } from '../../core/xtream';
+import { clamp, useRemote } from '../../ui/remote';
+import { WindowedList } from '../../ui/WindowedList';
+
+/** Saison et épisode sélectionnés (indices), conservés pendant la lecture. */
+export interface SeriesPosition {
+  season: number;
+  episode: number;
+}
+
+interface SeriesDetailProps {
+  credentials: XtreamCredentials;
+  item: CatalogItem;
+  position: SeriesPosition;
+  onPositionChange: (position: SeriesPosition) => void;
+  /** Lance un épisode ; `episodes` permet d'enchaîner sur le suivant. */
+  onPlay: (episodes: SeriesEpisode[], index: number, seriesTitle: string) => void;
+  onBack: () => void;
+}
+
+/** Fiche d'une série : ← → changent de saison, ↑ ↓ parcourent les épisodes. */
+export function SeriesDetail(props: SeriesDetailProps) {
+  const [details] = createResource(() => loadSeriesDetails(props.credentials, props.item.id));
+  const seasons = createMemo(() => {
+    const current = details();
+    return current ? seasonsOf(current) : [];
+  });
+
+  const info = () => details()?.info;
+  const title = () => displayTitle(info()?.name || props.item.name);
+  const season = () => seasons()[props.position.season];
+  const episodes = () => season()?.episodes ?? [];
+  const facts = () => {
+    const year = (info()?.releaseDate || info()?.release_date)?.slice(0, 4);
+    const count = seasons().length;
+    const seasonsText = count > 0 ? `${count} saison${count > 1 ? 's' : ''}` : undefined;
+    return [year, info()?.genre, seasonsText].filter(Boolean).join(' · ');
+  };
+
+  useRemote((key) => {
+    const { season: s, episode: e } = props.position;
+    switch (key) {
+      case 'left':
+      case 'right': {
+        const next = clamp(s + (key === 'left' ? -1 : 1), 0, seasons().length - 1);
+        if (next !== s) props.onPositionChange({ season: next, episode: 0 });
+        return;
+      }
+      case 'up':
+      case 'down':
+        return props.onPositionChange({
+          season: s,
+          episode: clamp(e + (key === 'up' ? -1 : 1), 0, episodes().length - 1),
+        });
+      case 'ok':
+        if (episodes()[e]) props.onPlay(episodes(), e, title());
+        return;
+      case 'back':
+        return props.onBack();
+    }
+  });
+
+  return (
+    <div class="detail">
+      <Show when={resizePoster(info()?.cover || props.item.poster, 342)}>
+        {(src) => <img class="detail__backdrop" src={src()} alt="" />}
+      </Show>
+      <div class="detail__content">
+        <Show when={resizePoster(info()?.cover || props.item.poster, 342)}>
+          {(src) => <img class="detail__poster" src={src()} alt="" />}
+        </Show>
+        <div class="detail__text">
+          <h1 class="detail__title">{title()}</h1>
+          <Show when={facts()}>
+            <p class="detail__facts">{facts()}</p>
+          </Show>
+          <Show when={!details.loading} fallback={<p class="detail__plot">Chargement…</p>}>
+            <p class="detail__plot detail__plot--short">
+              {info()?.plot || 'Pas de résumé disponible.'}
+            </p>
+            <Show
+              when={seasons().length > 0}
+              fallback={<p class="detail__credits">Aucun épisode disponible.</p>}
+            >
+              <nav class="seasons">
+                <For each={seasons()}>
+                  {(entry, index) => (
+                    <span
+                      class="seasons__item"
+                      classList={{ 'seasons__item--selected': index() === props.position.season }}
+                    >
+                      Saison {entry.number}
+                    </span>
+                  )}
+                </For>
+              </nav>
+              <WindowedList
+                items={episodes()}
+                selected={props.position.episode}
+                active
+                visibleRows={6}
+                onSelect={(index) => props.onPositionChange({ ...props.position, episode: index })}
+                onActivate={(index) => props.onPlay(episodes(), index, title())}
+              >
+                {(episode) => (
+                  <>
+                    <span class="row__label">
+                      {episode.episode_num}. {displayEpisodeTitle(episode)}
+                    </span>
+                    <Show when={episode.info?.duration}>
+                      <span class="row__count">{episode.info?.duration}</span>
+                    </Show>
+                  </>
+                )}
+              </WindowedList>
+            </Show>
+          </Show>
+        </div>
+      </div>
+    </div>
+  );
+}

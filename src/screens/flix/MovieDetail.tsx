@@ -3,8 +3,8 @@ import {
   displayTitle,
   loadVodDetails,
   resizePoster,
+  type CatalogItem,
   type VodDetails,
-  type VodItem,
 } from '../../core/vod';
 import type { XtreamCredentials } from '../../core/xtream';
 import { Menu, pressMenuItem, type MenuItem } from '../../ui/Menu';
@@ -12,8 +12,8 @@ import { useRemote } from '../../ui/remote';
 
 interface MovieDetailProps {
   credentials: XtreamCredentials;
-  item: VodItem;
-  onPlay: (item: VodItem, details: VodDetails | undefined) => void;
+  item: CatalogItem;
+  onPlay: (item: CatalogItem, details: VodDetails | undefined) => void;
   onBack: () => void;
 }
 
@@ -24,7 +24,7 @@ function firstBackdrop(details: VodDetails | undefined): string | undefined {
 
 /** Fiche d'un film : affiche, résumé, infos et bouton Lecture. */
 export function MovieDetail(props: MovieDetailProps) {
-  const [details] = createResource(() => loadVodDetails(props.credentials, props.item.stream_id));
+  const [details] = createResource(() => loadVodDetails(props.credentials, props.item.id));
   const [selected, setSelected] = createSignal(0);
 
   const info = () => details()?.info;
@@ -54,7 +54,7 @@ export function MovieDetail(props: MovieDetailProps) {
         {(src) => <img class="detail__backdrop" src={src()} alt="" />}
       </Show>
       <div class="detail__content">
-        <Show when={resizePoster(info()?.movie_image ?? props.item.stream_icon, 342)}>
+        <Show when={resizePoster(info()?.movie_image ?? props.item.poster, 342)}>
           {(src) => <img class="detail__poster" src={src()} alt="" />}
         </Show>
         <div class="detail__text">

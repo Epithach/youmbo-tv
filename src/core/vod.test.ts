@@ -4,9 +4,13 @@ import {
   categoriesForCountry,
   categoryLanguage,
   displayCategoryName,
+  displayEpisodeTitle,
   displayTitle,
+  episodeUrl,
   movieUrl,
   resizePoster,
+  seasonsOf,
+  type SeriesEpisode,
 } from './vod';
 
 const categories = [
@@ -90,5 +94,49 @@ describe('affichage', () => {
   it('construit l’URL de lecture d’un film', () => {
     const credentials = { server: 'http://x.tv:80', username: 'u', password: 'p w' };
     expect(movieUrl(credentials, 42, 'mkv')).toBe('http://x.tv:80/movie/u/p%20w/42.mkv');
+  });
+});
+
+describe('séries', () => {
+  const episode = (id: string, num: number, title: string): SeriesEpisode => ({
+    id,
+    episode_num: num,
+    title,
+    container_extension: 'mkv',
+  });
+
+  it('trie les saisons et les épisodes, et ignore les saisons vides', () => {
+    const seasons = seasonsOf({
+      info: {},
+      episodes: {
+        '2': [episode('21', 2, 'b'), episode('20', 1, 'a')],
+        '1': [episode('10', 1, 'x')],
+        '3': [],
+      },
+    });
+    expect(seasons.map((s) => s.number)).toEqual([1, 2]);
+    expect(seasons[1].episodes.map((e) => e.id)).toEqual(['20', '21']);
+  });
+
+  it('accepte les épisodes sous forme de tableau de saisons', () => {
+    const seasons = seasonsOf({
+      info: {},
+      episodes: [[episode('1', 1, 'a')], [episode('2', 1, 'b')]],
+    });
+    expect(seasons.map((s) => s.number)).toEqual([1, 2]);
+  });
+
+  it('extrait le titre de l’épisode', () => {
+    expect(
+      displayEpisodeTitle(episode('1', 1, 'FR - Seven Seconds (2018) (US) - S01E01 - Pilote')),
+    ).toBe('Pilote');
+    expect(displayEpisodeTitle(episode('1', 3, 'FR - Série - S01E03'))).toBe('Épisode 3');
+  });
+
+  it('construit l’URL de lecture d’un épisode', () => {
+    const credentials = { server: 'http://x.tv:80', username: 'u', password: 'p' };
+    expect(episodeUrl(credentials, episode('1411623', 1, 't'))).toBe(
+      'http://x.tv:80/series/u/p/1411623.mkv',
+    );
   });
 });
