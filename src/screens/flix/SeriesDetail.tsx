@@ -97,6 +97,7 @@ export function SeriesDetail(props: SeriesDetailProps) {
                     <span
                       class="seasons__item"
                       classList={{ 'seasons__item--selected': index() === props.position.season }}
+                      onClick={() => props.onPositionChange({ season: index(), episode: 0 })}
                     >
                       Saison {entry.number}
                     </span>

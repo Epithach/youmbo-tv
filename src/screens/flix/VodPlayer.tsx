@@ -41,9 +41,10 @@ const SHORT_SEEK = 10;
 const LONG_SEEK = 60;
 const VOLUME_STEP = 0.1;
 
-type ControlId = 'back' | 'play' | 'forward' | 'audio' | 'subtitle' | 'volumeDown' | 'volumeUp';
+type ControlId =
+  'back' | 'play' | 'forward' | 'audio' | 'subtitle' | 'volumeDown' | 'volumeUp' | 'exit';
 
-interface TrackMenu {
+interface OpenMenu {
   type: TrackType;
   selected: number;
 }
@@ -64,7 +65,7 @@ export function VodPlayer(props: VodPlayerProps) {
   const [controls, setControls] = createSignal(true);
   const [focused, setFocused] = createSignal<ControlId>('play');
   const [tracks, setTracks] = createSignal<TrackList>({ options: [], switchable: false });
-  const [menu, setMenu] = createSignal<TrackMenu>();
+  const [menu, setMenu] = createSignal<OpenMenu>();
   const [formatWarning, setFormatWarning] = createSignal<string>();
   let codecChecked = false;
 
@@ -147,10 +148,10 @@ export function VodPlayer(props: VodPlayerProps) {
     showControls();
   };
 
-  const chooseTrack = () => {
+  const chooseTrack = (index = menu()?.selected ?? 0) => {
     const current = menu();
     if (!current) return;
-    const entry = menuEntries(current.type)[current.selected];
+    const entry = menuEntries(current.type)[index];
     if (entry && tracks().switchable) {
       player?.selectTrack(current.type, entry.id);
       void refreshTracks();
@@ -167,6 +168,7 @@ export function VodPlayer(props: VodPlayerProps) {
     { id: 'subtitle', label: 'Sous-titres', disabled: optionsOf('subtitle').length === 0 },
     { id: 'volumeDown', label: 'Volume −' },
     { id: 'volumeUp', label: 'Volume +' },
+    { id: 'exit', label: 'Quitter' },
   ];
 
   const press = (id: ControlId) => {
@@ -184,6 +186,8 @@ export function VodPlayer(props: VodPlayerProps) {
         return changeVolume(-VOLUME_STEP);
       case 'volumeUp':
         return changeVolume(VOLUME_STEP);
+      case 'exit':
+        return props.onExit();
     }
   };
 
@@ -238,8 +242,16 @@ export function VodPlayer(props: VodPlayerProps) {
   });
 
   return (
-    <div class="vod-player">
-      <video ref={(el) => (video = el)} class="vod-player__video" />
+    // Souris : bouger affiche les commandes, cliquer sur l'image met en pause.
+    <div class="vod-player" onMouseMove={showControls}>
+      <video
+        ref={(el) => (video = el)}
+        class="vod-player__video"
+        onClick={() => {
+          player?.togglePause();
+          showControls();
+        }}
+      />
       <Show when={state() === 'loading'}>
         <p class="vod-player__status">Chargement…</p>
       </Show>
@@ -257,6 +269,7 @@ export function VodPlayer(props: VodPlayerProps) {
             entries={menuEntries(current().type)}
             focused={current().selected}
             readOnly={!tracks().switchable}
+            onChoose={chooseTrack}
           />
         )}
       </Show>
@@ -268,9 +281,19 @@ export function VodPlayer(props: VodPlayerProps) {
             position={position()}
             duration={duration()}
             volume={volume()}
+            onSeek={(fraction) => player?.seekBy(fraction * duration() - position())}
           />
           <Show when={controls()}>
-            <ControlBar buttons={buttons()} focused={focused()} />
+            <ControlBar
+              buttons={buttons()}
+              focused={focused()}
+              onFocus={setFocused}
+              onPress={(id) => {
+                setFocused(id);
+                press(id);
+                showControls();
+              }}
+            />
           </Show>
         </div>
       </Show>
