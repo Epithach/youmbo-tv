@@ -7,6 +7,11 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: development
+    ignore:
+      # typescript-eslint n'accepte que TypeScript < 6.1 : on attend son support de TS 7
+      # avant d'accepter les versions majeures. Retirer cette règle quand ce sera le cas.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
   - package-ecosystem: github-actions
     directory: /
     schedule:
