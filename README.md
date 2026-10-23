@@ -41,12 +41,12 @@ Les serveurs IPTV n'envoient pas d'en-têtes CORS, donc un navigateur refuse de 
 
 L'app se pilote entièrement au clavier, comme à la télécommande :
 
-| Touche         | Action                                          |
-| -------------- | ----------------------------------------------- |
-| ↑ / ↓          | Se déplacer dans la liste                       |
-| ← / →          | Passer des catégories aux chaînes               |
-| OK / Entrée    | Lire la chaîne (une seconde fois : plein écran) |
-| Retour / Échap | Quitter le plein écran / revenir aux catégories |
+| Touche         | Action                                                     |
+| -------------- | ---------------------------------------------------------- |
+| ↑ / ↓          | Se déplacer dans la liste                                  |
+| ← / →          | Passer d'une colonne à l'autre (pays, catégories, chaînes) |
+| OK / Entrée    | Lire la chaîne (une seconde fois : plein écran)            |
+| Retour / Échap | Quitter le plein écran / revenir aux catégories            |
 
 ## CI/CD
 
