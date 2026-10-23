@@ -1,7 +1,7 @@
 import type Hls from 'hls.js';
 import type Mpegts from 'mpegts.js';
 import { proxify } from '../core/net';
-import { detectStreamKind, type Player, type PlayerEvents } from './types';
+import { detectStreamKind, type Player, type PlayerEvents, type PlayerState } from './types';
 
 /**
  * Lecteur navigateur : hls.js pour le HLS, mpegts.js pour le MPEG-TS brut
@@ -13,22 +13,36 @@ export class WebPlayer implements Player {
   private mpegts?: Mpegts.Player;
   /** Incrémenté à chaque lecture pour ignorer les chargements devenus obsolètes. */
   private generation = 0;
+  private state: PlayerState = 'idle';
 
   constructor(
     private readonly video: HTMLVideoElement,
     private readonly events: PlayerEvents,
   ) {
-    video.addEventListener('playing', () => events.onStateChange('playing'));
-    video.addEventListener('waiting', () => events.onStateChange('loading'));
+    // `playing` ne suit pas toujours un `waiting` sur les flux live (rattrapage de
+    // latence de mpegts.js) : on considère aussi que la vidéo joue dès que le temps avance.
+    const markPlaying = () => {
+      if (this.state === 'loading' && !video.paused) this.setState('playing');
+    };
+    video.addEventListener('playing', markPlaying);
+    video.addEventListener('timeupdate', markPlaying);
+    video.addEventListener('waiting', () => {
+      if (this.state === 'playing') this.setState('loading');
+    });
+  }
+
+  private setState(state: PlayerState, message?: string) {
+    this.state = state;
+    this.events.onStateChange(state, message);
   }
 
   play(url: string): void {
     this.stop();
     const generation = ++this.generation;
-    this.events.onStateChange('loading');
+    this.setState('loading');
 
     const fail = (message: string) => {
-      if (generation === this.generation) this.events.onStateChange('error', message);
+      if (generation === this.generation) this.setState('error', message);
     };
 
     switch (detectStreamKind(url)) {
@@ -94,7 +108,7 @@ export class WebPlayer implements Player {
     }
     this.video.removeAttribute('src');
     this.video.load();
-    this.events.onStateChange('idle');
+    this.setState('idle');
   }
 
   destroy(): void {

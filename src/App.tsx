@@ -1,6 +1,7 @@
 import { createMemo, createSignal, Match, onCleanup, onMount, Show, Switch } from 'solid-js';
-import { parseM3u, type Channel, type Playlist } from './core/m3u';
-import { fetchDevPlaylistUrl, fetchText } from './core/net';
+import type { Channel, Playlist } from './core/m3u';
+import { fetchDevPlaylistUrl } from './core/net';
+import { loadPlaylistFrom } from './core/playlist-source';
 import { loadPlaylistUrl, savePlaylistUrl } from './core/storage';
 import { createPlayer, type Player, type PlayerState } from './player';
 import { toRemoteKey } from './ui/keys';
@@ -40,8 +41,7 @@ export function App() {
     setLoading(true);
     setError(undefined);
     try {
-      const parsed = parseM3u(await fetchText(url));
-      if (parsed.channels.length === 0) throw new Error('Aucune chaîne trouvée dans la playlist');
+      const parsed = await loadPlaylistFrom(url);
       savePlaylistUrl(url);
       setGroupIndex(0);
       setChannelIndex(0);
