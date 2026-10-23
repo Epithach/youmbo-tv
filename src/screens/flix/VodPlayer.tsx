@@ -6,6 +6,8 @@ interface VodPlayerProps {
   title: string;
   url: string;
   onExit: () => void;
+  /** Fin de la vidéo : enchaîne sur l'épisode suivant s'il y en a un. */
+  onEnded?: () => void;
 }
 
 /** Délai de lecture avant de vérifier que l'image et le son sont bien décodés. */
@@ -69,6 +71,7 @@ export function VodPlayer(props: VodPlayerProps) {
     });
     player.play(props.url);
     showOverlay();
+    video!.addEventListener('ended', () => (props.onEnded ?? props.onExit)());
   });
 
   const tick = setInterval(() => {

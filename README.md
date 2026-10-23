@@ -9,6 +9,12 @@ Client IPTV léger pour les TV Samsung (Tizen) et le navigateur.
 
 > L'application ne fournit aucun contenu : tu y ajoutes ta propre playlist.
 
+## Fonctionnalités
+
+- **Premier lancement** : lien de la playlist, puis choix du pays (France par défaut). Les deux se modifient ensuite dans **Paramètres**.
+- **Télévision** : chaînes en direct du pays choisi, classées par catégorie.
+- **YoumboFlix** (compte Xtream) : films et séries dans la langue du pays, en rangées d'affiches à la Netflix, avec fiches, saisons, épisodes et enchaînement automatique de l'épisode suivant.
+
 ## Démarrer en local
 
 Prérequis : Node.js 24 (voir `.nvmrc`).
@@ -41,12 +47,16 @@ Les serveurs IPTV n'envoient pas d'en-têtes CORS, donc un navigateur refuse de 
 
 L'app se pilote entièrement au clavier, comme à la télécommande :
 
-| Touche         | Action                                                     |
-| -------------- | ---------------------------------------------------------- |
-| ↑ / ↓          | Se déplacer dans la liste                                  |
-| ← / →          | Passer d'une colonne à l'autre (pays, catégories, chaînes) |
-| OK / Entrée    | Lire la chaîne (une seconde fois : plein écran)            |
-| Retour / Échap | Quitter le plein écran / revenir aux catégories            |
+| Où           | Touche         | Action                                          |
+| ------------ | -------------- | ----------------------------------------------- |
+| Partout      | ↑ ↓ ← →        | Se déplacer                                     |
+| Partout      | OK / Entrée    | Valider                                         |
+| Partout      | Retour / Échap | Revenir en arrière (jusqu'à l'accueil)          |
+| Télévision   | OK             | Lire la chaîne (une seconde fois : plein écran) |
+| YoumboFlix   | ↑ puis ← →     | Passer de Films à Séries                        |
+| Fiche série  | ← →            | Changer de saison                               |
+| Lecture film | OK             | Pause / reprise                                 |
+| Lecture film | ← → / ↑ ↓      | Reculer / avancer de 10 s / 1 min               |
 
 ## CI/CD
 
@@ -58,10 +68,12 @@ L'app se pilote entièrement au clavier, comme à la télécommande :
 
 ```
 src/
-  core/      parsing M3U, réseau, stockage local
-  player/    lecteur abstrait et implémentation navigateur
-  ui/        composants (listes fenêtrées, écran de configuration)
-tools/       outils de dev (proxy CORS)
+  app-state.ts  état global : écran, réglages, playlist
+  core/         M3U, Xtream, pays, films et séries, réseau, stockage
+  player/       lecteur abstrait et implémentation navigateur
+  screens/      un composant par écran (accueil, TV, YoumboFlix…)
+  ui/           composants partagés (listes fenêtrées, menus, télécommande)
+tools/          outils de dev (proxy CORS, diagnostic)
 ```
 
 ## Playlist refusée ?
@@ -71,3 +83,7 @@ npm run diagnose
 ```
 
 Lit `M3U_URL` dans `.env.local` (ou un lien passé en argument), affiche l'état du compte Xtream et teste le téléchargement direct avec plusieurs User-Agent. Le lien et les identifiants ne sont jamais affichés. Le User-Agent du proxy de dev se règle avec `PROXY_USER_AGENT`.
+
+## Limite connue sur PC
+
+Les films et séries sont souvent en MKV avec du son Dolby (AC3/E-AC3). Chrome affiche l'image mais ne décode pas ce son : un message le signale pendant la lecture. La TV Samsung lit ces formats nativement.
