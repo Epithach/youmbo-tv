@@ -36,8 +36,38 @@ function redact(text: string, source: string): string {
   return secrets.reduce((result, secret) => result.split(secret).join('***'), text);
 }
 
-console.log(`Hôte testé : ${new URL(url).host}\n`);
+// Pause entre deux essais : les fournisseurs limitent souvent le débit (HTTP 429).
+const PAUSE_MS = 2000;
+const pause = () => new Promise((resolve) => setTimeout(resolve, PAUSE_MS));
 
+const target = new URL(url);
+console.log(`Hôte testé : ${target.host}\n`);
+
+// 1. Lien Xtream : on interroge l'état du compte, c'est ce que l'app utilisera.
+const username = target.searchParams.get('username');
+const password = target.searchParams.get('password');
+if (/\/(get|player_api)\.php$/i.test(target.pathname) && username && password) {
+  const api = `${target.origin}/player_api.php?${new URLSearchParams({ username, password })}`;
+  try {
+    const response = await requestUpstream(api, { userAgent: USER_AGENTS.vlc });
+    const info = JSON.parse(await response.text()).user_info ?? {};
+    const expires = info.exp_date
+      ? new Date(Number(info.exp_date) * 1000).toLocaleDateString('fr-FR')
+      : 'inconnue';
+    console.log('Compte Xtream (API utilisée par l’app) :');
+    console.log(
+      `  authentifié : ${info.auth === 1 ? 'oui' : 'non'}, statut : ${info.status ?? '?'}`,
+    );
+    console.log(`  expiration : ${expires}`);
+    console.log(`  connexions : ${info.active_cons ?? '?'} / ${info.max_connections ?? '?'}\n`);
+  } catch (error) {
+    console.log(`API Xtream injoignable : ${(error as Error).message}\n`);
+  }
+  await pause();
+}
+
+// 2. Téléchargement direct de la playlist avec différents lecteurs.
+console.log('Téléchargement direct de la playlist :');
 for (const [label, userAgent] of Object.entries(USER_AGENTS)) {
   try {
     const response = await requestUpstream(url, { userAgent });
@@ -46,8 +76,15 @@ for (const [label, userAgent] of Object.entries(USER_AGENTS)) {
     const verdict = isPlaylist
       ? 'OK, playlist reçue'
       : `refusé : ${redact(body.replace(/\s+/g, ' ').slice(0, 120), url) || '(réponse vide)'}`;
-    console.log(`${label.padEnd(14)} HTTP ${response.status}  ${verdict}`);
+    console.log(`  ${label.padEnd(12)} HTTP ${response.status}  ${verdict}`);
+    if (response.status === 429) {
+      console.log(
+        '  Le fournisseur limite le nombre de requêtes : réessaie dans quelques minutes.',
+      );
+      break;
+    }
   } catch (error) {
-    console.log(`${label.padEnd(14)} erreur réseau : ${(error as Error).message}`);
+    console.log(`  ${label.padEnd(12)} erreur réseau : ${(error as Error).message}`);
   }
+  await pause();
 }

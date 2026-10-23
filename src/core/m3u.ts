@@ -18,6 +18,14 @@ export interface Playlist {
 
 export const UNGROUPED = 'Sans catégorie';
 
+/**
+ * Les fournisseurs glissent des faux titres dans les listes (`##### GENERAL #####`,
+ * `===== SPORT =====`) : ce ne sont pas des chaînes, on les retire.
+ */
+export function isSeparator(name: string): boolean {
+  return /^\s*(#{3,}|={3,}|-{3,}|\*{3,}|•{3,})/.test(name);
+}
+
 const ATTRIBUTE = /([\w-]+)="([^"]*)"/g;
 
 function parseAttributes(text: string): Record<string, string> {
@@ -83,6 +91,13 @@ export function parseM3u(source: string): Playlist {
     if (line.startsWith('#')) continue;
 
     const attributes = pending?.attributes ?? {};
+    const name = pending?.name || attributes['tvg-name'] || line;
+    if (isSeparator(name)) {
+      pending = undefined;
+      pendingGroup = undefined;
+      continue;
+    }
+
     const group = attributes['group-title'] || pendingGroup || UNGROUPED;
     if (!seenGroups.has(group)) {
       seenGroups.add(group);
@@ -91,7 +106,7 @@ export function parseM3u(source: string): Playlist {
 
     channels.push({
       id: String(channels.length),
-      name: pending?.name || attributes['tvg-name'] || line,
+      name,
       url: line,
       group,
       logo: attributes['tvg-logo'] || undefined,

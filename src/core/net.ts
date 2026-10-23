@@ -8,15 +8,21 @@ export function proxify(url: string): string {
   return `/proxy?url=${encodeURIComponent(url)}`;
 }
 
-export async function fetchText(url: string, signal?: AbortSignal): Promise<string> {
+async function request(url: string, signal?: AbortSignal): Promise<Response> {
   const response = await fetch(proxify(url), { signal });
   if (!response.ok) {
-    const hint = import.meta.env.DEV
-      ? ' Lance `npm run diagnose` pour trouver le lecteur (User-Agent) accepté.'
-      : '';
+    const hint = import.meta.env.DEV ? ' Lance `npm run diagnose` pour en savoir plus.' : '';
     throw new Error(`${new URL(url).host} a refusé la requête (HTTP ${response.status}).${hint}`);
   }
-  return response.text();
+  return response;
+}
+
+export async function fetchText(url: string, signal?: AbortSignal): Promise<string> {
+  return (await request(url, signal)).text();
+}
+
+export async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
+  return (await request(url, signal)).json() as Promise<T>;
 }
 
 /** Playlist par défaut fournie par `.env.local` (dev uniquement). */

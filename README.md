@@ -5,7 +5,7 @@ Client IPTV léger pour les TV Samsung (Tizen) et le navigateur.
 - **Stack** : TypeScript, [SolidJS](https://www.solidjs.com/) et [Vite](https://vite.dev/)
 - **Lecture** : hls.js et mpegts.js dans le navigateur, puis le lecteur natif AVPlay sur TV (à venir)
 - **Compatibilité** : le build vise Chromium 76 (Tizen 6, TV de 2021) et tourne donc aussi sur les modèles récents
-- **Sources** : playlists M3U / M3U8 (Xtream Codes et guide EPG XMLTV prévus)
+- **Sources** : playlists M3U / M3U8 et API Xtream Codes (guide EPG XMLTV prévu)
 
 > L'application ne fournit aucun contenu : tu y ajoutes ta propre playlist.
 
@@ -18,7 +18,7 @@ npm install
 npm run dev
 ```
 
-Ouvre ensuite http://localhost:5173 et colle le lien de ta playlist M3U.
+Ouvre ensuite http://localhost:5173 et colle le lien de ta playlist M3U. Un lien Xtream (`get.php?username=…&password=…`) passe automatiquement par l'API Xtream, qui marche même quand le fournisseur bloque l'export M3U.
 
 Pour ne pas le recoller à chaque fois, copie `.env.example` en `.env.local` et renseigne `M3U_URL`. Ce fichier est ignoré par Git : **ne commite jamais ton lien M3U**, il contient en général tes identifiants.
 
@@ -63,3 +63,11 @@ src/
   ui/        composants (listes fenêtrées, écran de configuration)
 tools/       outils de dev (proxy CORS)
 ```
+
+## Playlist refusée ?
+
+```bash
+npm run diagnose
+```
+
+Lit `M3U_URL` dans `.env.local` (ou un lien passé en argument), affiche l'état du compte Xtream et teste le téléchargement direct avec plusieurs User-Agent. Le lien et les identifiants ne sont jamais affichés. Le User-Agent du proxy de dev se règle avec `PROXY_USER_AGENT`.
