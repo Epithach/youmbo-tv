@@ -1,5 +1,24 @@
 export type PlayerState = 'idle' | 'loading' | 'playing' | 'error';
 
+export type TrackType = 'audio' | 'subtitle';
+
+/** Une piste audio ou de sous-titres proposée dans le lecteur. */
+export interface TrackOption {
+  id: string;
+  type: TrackType;
+  label: string;
+  selected: boolean;
+}
+
+export interface TrackList {
+  options: TrackOption[];
+  /**
+   * Le lecteur sait-il changer de piste ? Le navigateur du PC ne sait pas le
+   * faire dans un MKV (la TV oui) : on montre alors les pistes sans les activer.
+   */
+  switchable: boolean;
+}
+
 export interface PlayerEvents {
   onStateChange: (state: PlayerState, message?: string) => void;
 }
@@ -21,6 +40,13 @@ export interface Player {
   position(): number;
   duration(): number;
   paused(): boolean;
+  /** Volume entre 0 et 1. */
+  volume(): number;
+  setVolume(volume: number): void;
+  /** Pistes audio et sous-titres du média en cours. */
+  tracks(): Promise<TrackList>;
+  /** `null` pour les sous-titres : les désactiver. */
+  selectTrack(type: TrackType, id: string | null): void;
 }
 
 export type StreamKind = 'hls' | 'mpegts' | 'native';
