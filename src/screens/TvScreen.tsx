@@ -1,6 +1,7 @@
 import { createMemo, createSignal, Match, onCleanup, onMount, Show, Switch } from 'solid-js';
 import { app } from '../app-state';
 import { displayGroupName } from '../core/country';
+import { channelKey, library } from '../core/library';
 import type { Channel } from '../core/m3u';
 import { createPlayer, type Player, type PlayerState } from '../player';
 import { Marquee } from '../ui/Marquee';
@@ -9,6 +10,7 @@ import { WindowedList } from '../ui/WindowedList';
 import { ChannelInfo } from './tv/ChannelInfo';
 
 const ALL_GROUPS = 'Toutes les chaînes';
+const FAVORITES = '★ Favoris';
 const VISIBLE_ROWS = 14;
 
 type Column = 'groups' | 'channels';
@@ -23,7 +25,17 @@ export function TvScreen() {
   const [playerMessage, setPlayerMessage] = createSignal<string>();
   const [fullscreen, setFullscreen] = createSignal(false);
 
-  const groups = createMemo(() => [ALL_GROUPS, ...(app.country()?.groups ?? [])]);
+  // Favoris : toutes les chaînes marquées, quel que soit leur pays.
+  const favorites = createMemo(() => {
+    const keys = new Set(library.favoriteChannelKeys());
+    if (keys.size === 0) return [];
+    return (app.playlist()?.channels ?? []).filter((channel) => keys.has(channelKey(channel)));
+  });
+  const groups = createMemo(() => [
+    ALL_GROUPS,
+    ...(favorites().length > 0 ? [FAVORITES] : []),
+    ...(app.country()?.groups ?? []),
+  ]);
   // Chaînes rangées par catégorie une seule fois, pas à chaque changement de catégorie.
   const channelsByGroup = createMemo(() => {
     const byGroup = new Map<string, Channel[]>();
@@ -37,8 +49,15 @@ export function TvScreen() {
   const channels = createMemo(() => {
     const group = groups()[groupIndex()];
     if (group === ALL_GROUPS) return app.country()?.channels ?? [];
+    if (group === FAVORITES) return favorites();
     return channelsByGroup().get(group) ?? [];
   });
+
+  const toggleFavorite = (channel: Channel) => {
+    library.toggleFavoriteChannel(channel);
+    // Retirée depuis la catégorie Favoris : la sélection reste dans la liste.
+    setChannelIndex(clamp(channelIndex(), 0, channels().length - 1));
+  };
 
   /** Chaîne décrite sous la vidéo : la chaîne sélectionnée dans la liste, sinon celle qui joue. */
   const infoChannel = () =>
@@ -83,8 +102,13 @@ export function TvScreen() {
       }
       case 'left':
         return setColumn('groups');
-      case 'right':
-        return setColumn('channels');
+      case 'right': {
+        // Déjà dans les chaînes : → ajoute ou retire la chaîne des favoris.
+        if (column() !== 'channels') return setColumn('channels');
+        const channel = channels()[channelIndex()];
+        if (channel) toggleFavorite(channel);
+        return;
+      }
       case 'ok': {
         if (column() === 'groups') return setColumn('channels');
         const channel = channels()[channelIndex()];
@@ -152,6 +176,17 @@ export function TvScreen() {
                 </Show>
               </span>
               <Marquee class="row__label" text={channel.name} active={index === channelIndex()} />
+              <span
+                class="row__star"
+                classList={{ 'row__star--on': library.isFavoriteChannel(channel) }}
+                title="Favori"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  toggleFavorite(channel);
+                }}
+              >
+                {library.isFavoriteChannel(channel) ? '★' : '☆'}
+              </span>
               <Show when={playing()?.id === channel.id}>
                 <span class="row__badge">▶</span>
               </Show>
@@ -176,7 +211,7 @@ export function TvScreen() {
           </Switch>
         </div>
         <Show when={!fullscreen()}>
-          <ChannelInfo channel={infoChannel()} />
+          <ChannelInfo channel={infoChannel()} showFavoriteHint={column() === 'channels'} />
         </Show>
       </section>
     </div>
