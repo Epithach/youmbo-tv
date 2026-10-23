@@ -1,4 +1,4 @@
-import { createMemo, createResource, For, Show } from 'solid-js';
+import { createMemo, createResource, createSignal, For, Show } from 'solid-js';
 import {
   loadSeriesDetails,
   seasonsOf,
@@ -6,10 +6,12 @@ import {
   type SeriesEpisode,
 } from '../../core/catalog';
 import { displayEpisodeTitle, displayTitle, resizePoster } from '../../core/catalog-display';
+import { library, progressKey } from '../../core/library';
 import type { XtreamCredentials } from '../../core/xtream';
 import { Marquee } from '../../ui/Marquee';
 import { clamp, useRemote } from '../../ui/remote';
 import { WindowedList } from '../../ui/WindowedList';
+import { formatTime } from './PlayerControls';
 
 /** Saison et épisode sélectionnés (indices), conservés pendant la lecture. */
 export interface SeriesPosition {
@@ -27,7 +29,10 @@ interface SeriesDetailProps {
   onBack: () => void;
 }
 
-/** Fiche d'une série : ← → changent de saison, ↑ ↓ parcourent les épisodes. */
+/**
+ * Fiche d'une série : ← → changent de saison, ↑ ↓ parcourent les épisodes,
+ * ↑ depuis le premier épisode atteint le bouton « Ma liste ».
+ */
 export function SeriesDetail(props: SeriesDetailProps) {
   const [details] = createResource(() => loadSeriesDetails(props.credentials, props.item.id));
   const seasons = createMemo(() => {
@@ -46,8 +51,19 @@ export function SeriesDetail(props: SeriesDetailProps) {
     return [year, info()?.genre, seasonsText].filter(Boolean).join(' · ');
   };
 
+  const [onFavorite, setOnFavorite] = createSignal(false);
+  const resumeAt = (episode: SeriesEpisode) =>
+    library.resumePosition(progressKey('episode', episode.id));
+
   useRemote((key) => {
     const { season: s, episode: e } = props.position;
+    if (onFavorite()) {
+      if (key === 'ok') library.toggleFavorite(props.item);
+      else if (key === 'down') setOnFavorite(false);
+      else if (key === 'back') props.onBack();
+      return;
+    }
+    if (key === 'up' && e === 0) return setOnFavorite(true);
     switch (key) {
       case 'left':
       case 'right': {
@@ -91,6 +107,15 @@ export function SeriesDetail(props: SeriesDetailProps) {
               when={seasons().length > 0}
               fallback={<p class="detail__credits">Aucun épisode disponible.</p>}
             >
+              <div class="detail__actions">
+                <span
+                  class="controls__button"
+                  classList={{ 'controls__button--focused': onFavorite() }}
+                  onClick={() => library.toggleFavorite(props.item)}
+                >
+                  {library.isFavorite(props.item) ? '♥ Dans ma liste' : '♡ Ma liste'}
+                </span>
+              </div>
               <nav class="seasons">
                 <For each={seasons()}>
                   {(entry, index) => (
@@ -119,8 +144,15 @@ export function SeriesDetail(props: SeriesDetailProps) {
                       text={`${episode.episode_num}. ${displayEpisodeTitle(episode)}`}
                       active={index === props.position.episode}
                     />
-                    <Show when={episode.info?.duration}>
-                      <span class="row__count">{episode.info?.duration}</span>
+                    <Show
+                      when={resumeAt(episode)}
+                      fallback={
+                        <Show when={episode.info?.duration}>
+                          <span class="row__count">{episode.info?.duration}</span>
+                        </Show>
+                      }
+                    >
+                      {(at) => <span class="row__count">Reprise à {formatTime(at())}</span>}
                     </Show>
                   </>
                 )}

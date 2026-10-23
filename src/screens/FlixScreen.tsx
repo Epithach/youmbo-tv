@@ -8,6 +8,7 @@ import {
   type VodDetails,
 } from '../core/catalog';
 import { displayEpisodeTitle, displayTitle } from '../core/catalog-display';
+import { library, progressKey, type WatchProgress } from '../core/library';
 import type { XtreamCredentials } from '../core/xtream';
 import { useRemote } from '../ui/remote';
 import { FlixBrowse, INITIAL_POSITION, type BrowsePosition } from './flix/FlixBrowse';
@@ -22,6 +23,8 @@ interface Playback {
   back: View;
   /** Épisode suivant à enchaîner automatiquement, s'il y en a un. */
   next?: () => void;
+  progress: Omit<WatchProgress, 'position' | 'duration' | 'updatedAt'>;
+  startAt?: number;
 }
 
 type View =
@@ -42,7 +45,8 @@ export function FlixScreen() {
 
   const open = (item: CatalogItem) => {
     if (item.kind === 'series') {
-      setSeriesPosition({ season: 0, episode: 0 });
+      // Une série entamée s'ouvre sur le dernier épisode regardé.
+      setSeriesPosition(library.lastEpisode(item.id) ?? { season: 0, episode: 0 });
       setView({ kind: 'series', item });
     } else {
       setView({ kind: 'movie', item });
@@ -53,14 +57,18 @@ export function FlixScreen() {
     credentials: XtreamCredentials,
     item: CatalogItem,
     details: VodDetails | undefined,
+    fromStart: boolean,
   ) => {
     const extension = details?.movie_data.container_extension || item.extension || 'mp4';
+    const key = progressKey('movie', item.id);
     setView({
       kind: 'play',
       playback: {
         title: displayTitle(details?.info.name || item.name),
         url: movieUrl(credentials, item.id, extension),
         back: { kind: 'movie', item },
+        progress: { key, item },
+        startAt: fromStart ? undefined : library.resumePosition(key),
       },
     });
   };
@@ -75,12 +83,16 @@ export function FlixScreen() {
     const episode = episodes[index];
     setSeriesPosition({ ...seriesPosition(), episode: index });
     const hasNext = index + 1 < episodes.length;
+    const key = progressKey('episode', episode.id);
+    const episodeTitle = `${episode.episode_num}. ${displayEpisodeTitle(episode)}`;
     setView({
       kind: 'play',
       playback: {
-        title: `${seriesTitle} · ${episode.episode_num}. ${displayEpisodeTitle(episode)}`,
+        title: `${seriesTitle} · ${episodeTitle}`,
         url: episodeUrl(credentials, episode),
         back: { kind: 'series', item },
+        progress: { key, item, season: seriesPosition().season, episode: index, episodeTitle },
+        startAt: library.resumePosition(key),
         next: hasNext
           ? () => playEpisode(credentials, item, episodes, index + 1, seriesTitle)
           : undefined,
@@ -111,7 +123,9 @@ export function FlixScreen() {
               <MovieDetail
                 credentials={credentials()}
                 item={current.item}
-                onPlay={(item, details) => playMovie(credentials(), item, details)}
+                onPlay={(item, details, fromStart) =>
+                  playMovie(credentials(), item, details, fromStart)
+                }
                 onBack={() => setView({ kind: 'browse' })}
               />
             )}
@@ -137,6 +151,8 @@ export function FlixScreen() {
                 url={current.playback.url}
                 onExit={() => setView(current.playback.back)}
                 onEnded={current.playback.next}
+                progress={current.playback.progress}
+                startAt={current.playback.startAt}
               />
             )}
           </Match>

@@ -1,6 +1,7 @@
 import { GENRES, genresIn, isRecentCategory } from './genres';
 import { loadCategory, type CatalogItem, type CatalogKind, type VodCategory } from './catalog';
 import { displayCategoryName } from './catalog-display';
+import { library } from './library';
 import type { XtreamCredentials } from './xtream';
 
 /** Une rangée de YoumboFlix : une catégorie du fournisseur, ou un genre. */
@@ -8,6 +9,36 @@ export interface CatalogRow {
   key: string;
   title: string;
   load: () => Promise<CatalogItem[]>;
+  /** Rangée locale, toujours à jour (favoris, reprises) : pas de chargement. */
+  live?: () => CatalogItem[];
+}
+
+/** Rangées personnelles en tête de l'onglet, seulement si elles ne sont pas vides. */
+export function libraryRows(kind: CatalogKind): CatalogRow[] {
+  const continueItems = () =>
+    library.continueWatching(kind).map((p) => ({
+      ...p.item,
+      progress: p.duration > 0 ? p.position / p.duration : undefined,
+    }));
+  const favorites = () => library.favorites(kind);
+  const rows: CatalogRow[] = [];
+  if (continueItems().length > 0) {
+    rows.push({
+      key: 'library:continue',
+      title: 'Continuer à regarder',
+      load: async () => continueItems(),
+      live: continueItems,
+    });
+  }
+  if (favorites().length > 0) {
+    rows.push({
+      key: 'library:favorites',
+      title: 'Ma liste',
+      load: async () => favorites(),
+      live: favorites,
+    });
+  }
+  return rows;
 }
 
 /** Requêtes simultanées pour charger toutes les catégories (les fournisseurs limitent le débit). */

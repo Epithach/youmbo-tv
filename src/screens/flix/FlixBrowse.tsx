@@ -8,7 +8,7 @@ import {
   untrack,
 } from 'solid-js';
 import { app } from '../../app-state';
-import { buildRows, type CatalogRow } from '../../core/catalog-rows';
+import { buildRows, libraryRows, type CatalogRow } from '../../core/catalog-rows';
 import { loadCategories, type CatalogItem, type CatalogKind } from '../../core/catalog';
 import { categoriesForCountry } from '../../core/catalog-language';
 import { displayTitle, resizePoster } from '../../core/catalog-display';
@@ -66,18 +66,21 @@ export function FlixBrowse(props: FlixBrowseProps) {
   const [allCategories] = createResource(kind, (current) =>
     loadCategories(props.credentials, current),
   );
-  const catalogRows = createMemo<CatalogRow[]>(() =>
+  const providerRows = createMemo<CatalogRow[]>(() =>
     buildRows(
       props.credentials,
       kind(),
       categoriesForCountry(allCategories() ?? [], app.country()?.code ?? ''),
     ),
   );
+  // « Continuer à regarder » et « Ma liste » en tête, quand elles ne sont pas vides.
+  const catalogRows = createMemo<CatalogRow[]>(() => [...libraryRows(kind()), ...providerRows()]);
   const [rows, setRows] = createSignal<Record<string, RowState>>({});
 
   const rowKey = (catalogRow: CatalogRow) => `${kind()}|${catalogRow.key}`;
 
   const ensureLoaded = (catalogRow: CatalogRow) => {
+    if (catalogRow.live) return;
     const key = rowKey(catalogRow);
     const state = untrack(rows)[key];
     // Déjà chargée (ou en cours) : rien à faire. Vide ou en erreur : on réessaie en y revenant.
@@ -104,8 +107,11 @@ export function FlixBrowse(props: FlixBrowseProps) {
     for (const { catalogRow } of visibleRows()) ensureLoaded(catalogRow);
   });
 
+  const stateOf = (catalogRow: CatalogRow): RowState | undefined =>
+    catalogRow.live ? catalogRow.live() : rows()[rowKey(catalogRow)];
+
   const itemsOf = (catalogRow: CatalogRow): CatalogItem[] => {
-    const state = rows()[rowKey(catalogRow)];
+    const state = stateOf(catalogRow);
     return Array.isArray(state) ? state : [];
   };
 
@@ -199,7 +205,7 @@ export function FlixBrowse(props: FlixBrowseProps) {
                 <section class="flix-row" classList={{ 'flix-row--active': index === row() }}>
                   <h2 class="flix-row__title">{catalogRow.title}</h2>
                   <PosterRow
-                    state={rows()[rowKey(catalogRow)]}
+                    state={stateOf(catalogRow)}
                     selected={column(catalogRow)}
                     active={index === row()}
                     onOpen={(posterIndex) => {
@@ -273,6 +279,13 @@ function PosterRow(props: PosterRowProps) {
                   fallback={<div class="poster__placeholder">{displayTitle(item.name)}</div>}
                 >
                   {(src) => <img class="poster__image" src={src()} alt="" loading="lazy" />}
+                </Show>
+                <Show when={item.progress}>
+                  {(progress) => (
+                    <div class="poster__progress">
+                      <div style={{ width: `${Math.round(progress() * 100)}%` }} />
+                    </div>
+                  )}
                 </Show>
                 <figcaption class="poster__title">
                   <Marquee
