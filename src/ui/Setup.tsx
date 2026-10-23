@@ -19,7 +19,9 @@ export function Setup(props: SetupProps) {
   return (
     <form class="setup" onSubmit={submit}>
       <h1 class="setup__title">Youmbo TV</h1>
-      <p class="setup__hint">Colle le lien de ta playlist M3U pour commencer.</p>
+      <p class="setup__hint">
+        Colle le lien de ta playlist M3U ou ton lien Xtream (get.php) pour commencer.
+      </p>
       <input
         class="setup__input"
         type="url"

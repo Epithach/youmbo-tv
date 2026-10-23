@@ -27,7 +27,11 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: './',
-    plugins: [solid(), devProxy({ defaultPlaylistUrl: env.M3U_URL }), classicScript()],
+    plugins: [
+      solid(),
+      devProxy({ defaultPlaylistUrl: env.M3U_URL, userAgent: env.PROXY_USER_AGENT }),
+      classicScript(),
+    ],
     build: {
       target: TV_TARGET,
       cssTarget: TV_TARGET,
