@@ -47,13 +47,15 @@ export class WebPlayer implements Player {
     const fail = (message: string) => {
       if (generation === this.generation) this.setState('error', message);
     };
+    // Ex. bibliothèque de lecture introuvable : on l'affiche au lieu de rester sur « Chargement… ».
+    const onLoadError = (error: Error) => fail(`Lecteur indisponible : ${error.message}`);
 
     switch (detectStreamKind(url)) {
       case 'hls':
-        void this.playHls(url, generation, fail);
+        this.playHls(url, generation, fail).catch(onLoadError);
         break;
       case 'mpegts':
-        void this.playMpegts(url, generation, fail);
+        this.playMpegts(url, generation, fail).catch(onLoadError);
         break;
       case 'native':
         this.video.src = proxify(url);
