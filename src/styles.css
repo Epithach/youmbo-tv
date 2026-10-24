@@ -1493,13 +1493,17 @@ body {
 }
 
 /* Bande-annonce en fond de la bannière (après 3 s sur un titre). */
+/* Bande-annonce 16:9 recadrée pour couvrir toute la bannière (haut et bas coupés). */
 .hero__preview {
   position: absolute;
-  top: 0;
+  top: 50%;
   right: 0;
   width: 75%;
-  height: 100%;
+  height: 42.19vw;
+  min-width: 640px;
+  min-height: 100%;
   border: 0;
+  transform: translateY(-50%);
   opacity: 0;
   pointer-events: none;
   -webkit-mask-image: linear-gradient(to right, transparent, #000 40%);
@@ -1511,16 +1515,38 @@ body {
   opacity: 1;
 }
 
-/* Musique de fond des fiches : la bande-annonce (avec le son) derrière la fiche. */
+/*
+ * Fond des fiches : la bande-annonce (avec le son), recadrée en 16:9 pour
+ * couvrir tout l'écran, puis l'opening d'un animé en fondu par-dessus.
+ */
 .detail__music-video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100vw;
+  height: 56.25vw;
+  min-width: 177.78vh;
+  min-height: 100vh;
+  border: 0;
+  opacity: 0.35;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.detail__opening {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  border: 0;
-  opacity: 0.3;
+  object-fit: cover;
+  opacity: 0;
   pointer-events: none;
+  transition: opacity 1.5s ease;
+}
+
+.detail__opening--playing {
+  opacity: 0.35;
 }
 
 .detail__content {

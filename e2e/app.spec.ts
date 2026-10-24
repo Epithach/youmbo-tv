@@ -146,11 +146,16 @@ test('YoumboFlix : bande-annonce en fond de la bannière après 3 s', async ({ p
   await press(page, 'ArrowRight', 'Enter');
   await expect(rowTitles(page).first()).toBeVisible();
 
-  // Rien tout de suite, puis la bande-annonce YouTube (muette) après l'attente.
+  // Rien tout de suite, puis la bande-annonce YouTube (avec le son) après l'attente.
   await expect(page.locator('.hero__preview')).toHaveCount(0);
-  await expect(page.locator('.hero__preview')).toHaveAttribute('src', /youtube-nocookie.*mute=1/, {
-    timeout: 8000,
-  });
+  await expect(page.locator('.hero__preview')).toHaveAttribute(
+    'src',
+    /youtube-nocookie.*autoplay=1/,
+    {
+      timeout: 8000,
+    },
+  );
+  await expect(page.locator('.hero__preview')).not.toHaveAttribute('src', /mute=1/);
 
   // Changer de titre l'arrête.
   await press(page, 'ArrowRight');

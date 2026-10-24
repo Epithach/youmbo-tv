@@ -1,20 +1,26 @@
 import { fetchJson } from './net';
+import { loadJson, saveJson } from './storage';
 import { normalize } from './text';
 
 /**
  * Génériques d'animés (openings) via l'API publique d'AnimeThemes
- * (https://animethemes.moe), pour la musique de fond des fiches.
+ * (https://animethemes.moe), pour la musique et la vidéo de fond des fiches.
  * Usage personnel : les génériques restent la propriété de leurs auteurs.
+ *
+ * Les serveurs d'AnimeThemes sont lents (souvent plusieurs secondes) : la
+ * recherche est lancée dès qu'un animé est sélectionné, et les openings
+ * trouvés sont retenus sur l'appareil.
  */
 
-interface ThemeEntry {
-  videos?: { audio?: { link?: string } }[];
+interface ThemeVideo {
+  link?: string;
+  resolution?: number;
+  audio?: { link?: string };
 }
 
 interface AnimeTheme {
   type?: string;
-  sequence?: number | null;
-  animethemeentries?: ThemeEntry[];
+  animethemeentries?: { videos?: ThemeVideo[] }[];
 }
 
 export interface AnimeResult {
@@ -25,7 +31,15 @@ export interface AnimeResult {
   animethemes?: AnimeTheme[];
 }
 
+/** Un opening : vidéo (sans crédits, plus légère possible) et piste audio. */
+export interface Opening {
+  video?: string;
+  audio?: string;
+}
+
 const SEASON_ORDER: Record<string, number> = { Winter: 0, Spring: 1, Summer: 2, Fall: 3 };
+/** Résolution visée pour la vidéo de fond : assez nette, bien plus légère que le 1080p. */
+const PREFERRED_RESOLUTION = 720;
 
 /** Titre de recherche : sans préfixe de langue ni parenthèses (« (2020) (JP) »). */
 export function searchTitle(name: string): string {
@@ -36,11 +50,29 @@ export function searchTitle(name: string): string {
     .trim();
 }
 
-function openings(anime: AnimeResult): string[] {
+/** La vidéo la plus proche de 720p (puis la plus légère). */
+function pickVideo(videos: readonly ThemeVideo[]): ThemeVideo | undefined {
+  return [...videos]
+    .filter((v) => v.link)
+    .sort(
+      (a, b) =>
+        Math.abs((a.resolution ?? 0) - PREFERRED_RESOLUTION) -
+          Math.abs((b.resolution ?? 0) - PREFERRED_RESOLUTION) ||
+        (a.resolution ?? 0) - (b.resolution ?? 0),
+    )[0];
+}
+
+function openingsOf(anime: AnimeResult): Opening[] {
   return (anime.animethemes ?? [])
     .filter((theme) => theme.type === 'OP')
-    .map((theme) => theme.animethemeentries?.[0]?.videos?.[0]?.audio?.link)
-    .filter((link): link is string => Boolean(link));
+    .map((theme) => {
+      const videos = theme.animethemeentries?.[0]?.videos ?? [];
+      return {
+        video: pickVideo(videos)?.link,
+        audio: videos.find((v) => v.audio?.link)?.audio?.link,
+      };
+    })
+    .filter((opening) => opening.video || opening.audio);
 }
 
 interface PickOptions {
@@ -51,22 +83,17 @@ interface PickOptions {
   season?: number;
   /** Films : année de sortie, si connue. */
   year?: number;
-  /** Tirage au hasard parmi les openings d'une même saison (0 ≤ random < 1). */
-  random?: number;
 }
 
 /**
- * Choisit un opening : la N-ième saison TV (par ordre de diffusion) pour une
- * série, le film (de la bonne année si possible) pour un film.
+ * Openings de la bonne œuvre : la N-ième saison TV (par ordre de diffusion)
+ * pour une série, le film (de la bonne année si possible) pour un film.
  */
-export function pickOpening(
-  results: readonly AnimeResult[],
-  options: PickOptions,
-): string | undefined {
+export function seasonOpenings(results: readonly AnimeResult[], options: PickOptions): Opening[] {
   const wanted = normalize(options.title);
   const sameWork = results.filter((anime) => normalize(anime.name).startsWith(wanted));
   const candidates = (sameWork.length > 0 ? sameWork : results).filter(
-    (a) => openings(a).length > 0,
+    (a) => openingsOf(a).length > 0,
   );
 
   let anime: AnimeResult | undefined;
@@ -84,10 +111,12 @@ export function pickOpening(
     const movies = candidates.filter((a) => a.media_format === 'MOVIE');
     anime = movies.find((a) => a.year === options.year) ?? movies[0] ?? candidates[0];
   }
-  if (!anime) return undefined;
+  return anime ? openingsOf(anime) : [];
+}
 
-  const links = openings(anime);
-  return links[Math.floor((options.random ?? 0) * links.length)] ?? links[0];
+/** Un opening au hasard parmi ceux de la saison (0 ≤ random < 1). */
+export function pickOpening(openings: readonly Opening[], random: number): Opening | undefined {
+  return openings[Math.floor(random * openings.length)] ?? openings[0];
 }
 
 const searches = new Map<string, Promise<AnimeResult[]>>();
@@ -108,6 +137,23 @@ export function searchAnime(title: string): Promise<AnimeResult[]> {
     searches.set(title, search);
   }
   return search;
+}
+
+const STORAGE_KEY = 'youmbo.openings';
+
+/**
+ * Openings d'un animé (et d'une saison), retenus sur l'appareil : la
+ * deuxième ouverture d'une fiche ne refait pas la recherche (lente).
+ */
+export async function findOpenings(name: string, options: Omit<PickOptions, 'title'>) {
+  const title = searchTitle(name);
+  const key = `${options.kind}|${normalize(title)}|${options.season ?? ''}|${options.year ?? ''}`;
+  const saved = loadJson<Record<string, Opening[]>>(STORAGE_KEY, {});
+  if (saved[key]?.length) return saved[key];
+
+  const openings = seasonOpenings(await searchAnime(title), { ...options, title });
+  if (openings.length > 0) saveJson(STORAGE_KEY, { ...saved, [key]: openings });
+  return openings;
 }
 
 /** Un animé chez le fournisseur : catégorie « MANGA » / « ANIME », ou « (JP) » dans le titre. */

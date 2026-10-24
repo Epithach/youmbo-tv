@@ -9,10 +9,10 @@ const DETAILS_DELAY_MS = 500;
 /** Attente sur un titre avant d'en lancer la bande-annonce en fond, à la Netflix. */
 const PREVIEW_DELAY_MS = 3000;
 
-/** Lecteur YouTube sans cookies, muet, sans commandes, en boucle : un fond animé. */
+/** Lecteur YouTube sans cookies, avec le son, sans commandes, en boucle : un fond animé. */
 const previewUrl = (id: string) =>
   `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}` +
-  `?autoplay=1&mute=1&controls=0&loop=1&playlist=${encodeURIComponent(id)}` +
+  `?autoplay=1&controls=0&loop=1&playlist=${encodeURIComponent(id)}` +
   '&modestbranding=1&rel=0&playsinline=1&disablekb=1';
 
 export const HERO_BUTTONS = ['▶ Lecture', 'Plus d’infos'] as const;
