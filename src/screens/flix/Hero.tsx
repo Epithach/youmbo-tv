@@ -1,21 +1,17 @@
 import { createEffect, createSignal, For, onCleanup, Show } from 'solid-js';
 import { firstImage, loadVodDetails, type CatalogItem, type VodInfo } from '../../core/catalog';
 import { displayTitle, resizePoster } from '../../core/catalog-display';
+import { loadVolume } from '../../core/storage';
 import type { XtreamCredentials } from '../../core/xtream';
+import { YoutubeBackground } from '../../ui/YoutubeBackground';
 import { Badges } from './FlixParts';
 
 /** Attente avant de demander la fiche d'un film sélectionné (pas pendant un défilement). */
 const DETAILS_DELAY_MS = 500;
-/** Attente sur un titre avant de lancer (encore invisible) sa bande-annonce en fond, à la Netflix. */
+/** Attente sur un titre avant de lancer (muette et invisible) sa bande-annonce en fond. */
 const PREVIEW_DELAY_MS = 1000;
-/** Le lecteur YouTube montre ses boutons quelques instants en démarrant : fondu après. */
-const PREVIEW_FADE_DELAY_MS = 2000;
-
-/** Lecteur YouTube sans cookies, avec le son, sans commandes, en boucle : un fond animé. */
-const previewUrl = (id: string) =>
-  `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}` +
-  `?autoplay=1&controls=0&loop=1&playlist=${encodeURIComponent(id)}` +
-  '&modestbranding=1&rel=0&playsinline=1&disablekb=1';
+/** La bande-annonce apparaît, avec le son en fondu, 5 s après la sélection du titre. */
+const PREVIEW_REVEAL_MS = 5000 - PREVIEW_DELAY_MS;
 
 export const HERO_BUTTONS = ['▶ Lecture', 'Plus d’infos'] as const;
 
@@ -51,16 +47,14 @@ export function Hero(props: HeroProps) {
   /** Fiche du film affiché (pas celle d'un film vu juste avant). */
   const movie = () => (info()?.id === props.item?.id ? info()?.info : undefined);
 
-  // Bande-annonce lancée après 1 s sur le même titre, visible vers 3 s ; elle s'arrête dès qu'on bouge.
+  // Bande-annonce lancée après 1 s sur le même titre, visible à 5 s ; elle s'arrête dès qu'on bouge.
   const trailerId = () => movie()?.youtube_trailer || props.item?.trailer;
   const [preview, setPreview] = createSignal<string>();
-  const [previewReady, setPreviewReady] = createSignal(false);
   createEffect(() => {
     // Changer de titre relance le délai, même si la bande-annonce est la même.
     void props.item?.id;
     const id = trailerId();
     setPreview(undefined);
-    setPreviewReady(false);
     if (!id) return;
     const timer = setTimeout(() => setPreview(id), PREVIEW_DELAY_MS);
     onCleanup(() => clearTimeout(timer));
@@ -78,14 +72,12 @@ export function Hero(props: HeroProps) {
           </Show>
           <Show when={preview()}>
             {(id) => (
-              <iframe
+              <YoutubeBackground
+                id={id()}
                 class="hero__preview"
-                classList={{ 'hero__preview--ready': previewReady() }}
-                src={previewUrl(id())}
                 title="Bande-annonce"
-                allow="autoplay; encrypted-media"
-                tabIndex={-1}
-                onLoad={() => setTimeout(() => setPreviewReady(true), PREVIEW_FADE_DELAY_MS)}
+                volume={loadVolume()}
+                revealAfterMs={PREVIEW_REVEAL_MS}
               />
             )}
           </Show>

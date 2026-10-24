@@ -3,11 +3,12 @@ import { findOpenings, looksLikeAnime, pickOpening, type Opening } from '../../c
 import { loadCategories, type CatalogItem } from '../../core/catalog';
 import { loadVolume } from '../../core/storage';
 import type { XtreamCredentials } from '../../core/xtream';
+import { YoutubeBackground } from '../../ui/YoutubeBackground';
 
 /** Attente avant la bande-annonce : pas pour une fiche ouverte puis quittée aussitôt. */
 const START_DELAY_MS = 1000;
-/** Le lecteur YouTube montre ses boutons quelques instants en démarrant. */
-const TRAILER_FADE_DELAY_MS = 2000;
+/** La bande-annonce apparaît, avec le son en fondu, 5 s après l'ouverture de la fiche. */
+const TRAILER_REVEAL_MS = 5000 - START_DELAY_MS;
 /** La musique de fond reste un peu en retrait du volume choisi pour les vidéos. */
 const MUSIC_VOLUME = 0.6;
 
@@ -48,11 +49,6 @@ interface DetailMusicProps {
   paused: boolean;
 }
 
-const trailerUrl = (id: string) =>
-  `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}` +
-  `?autoplay=1&controls=0&loop=1&playlist=${encodeURIComponent(id)}` +
-  '&modestbranding=1&rel=0&playsinline=1&disablekb=1';
-
 /**
  * Fond animé et musical d'une fiche : la bande-annonce pour un film ou une
  * série ; pour un animé, l'opening de la saison (AnimeThemes) en fondu dès
@@ -91,25 +87,18 @@ export function DetailMusic(props: DetailMusicProps) {
   // Animé : on attend l'opening ; la bande-annonce seulement s'il n'y en a pas.
   const noOpening = () => anime() === false || (anime() === true && !opening.loading && !opening());
   const trailer = () => (active() && started() && noOpening() ? props.trailerId : undefined);
-  // Le lecteur YouTube affiche ses boutons en démarrant : on attend avant le fondu.
-  const [trailerReady, setTrailerReady] = createSignal(false);
-  createEffect(() => {
-    if (!trailer()) setTrailerReady(false);
-  });
   const setVolume = (el: HTMLMediaElement) => (el.volume = loadVolume() * MUSIC_VOLUME);
 
   return (
     <>
       <Show when={trailer()}>
         {(id) => (
-          <iframe
+          <YoutubeBackground
+            id={id()}
             class="detail__music-video"
-            classList={{ 'detail__music-video--ready': trailerReady() }}
-            src={trailerUrl(id())}
-            onLoad={() => setTimeout(() => setTrailerReady(true), TRAILER_FADE_DELAY_MS)}
             title="Bande-annonce (musique de fond)"
-            allow="autoplay; encrypted-media"
-            tabIndex={-1}
+            volume={loadVolume() * MUSIC_VOLUME}
+            revealAfterMs={TRAILER_REVEAL_MS}
           />
         )}
       </Show>
