@@ -8,6 +8,8 @@ import { Badges } from './FlixParts';
 const DETAILS_DELAY_MS = 500;
 /** Attente sur un titre avant d'en lancer la bande-annonce en fond, à la Netflix. */
 const PREVIEW_DELAY_MS = 3000;
+/** Le lecteur YouTube montre ses boutons quelques instants en démarrant : fondu après. */
+const PREVIEW_FADE_DELAY_MS = 2000;
 
 /** Lecteur YouTube sans cookies, avec le son, sans commandes, en boucle : un fond animé. */
 const previewUrl = (id: string) =>
@@ -83,8 +85,7 @@ export function Hero(props: HeroProps) {
                 title="Bande-annonce"
                 allow="autoplay; encrypted-media"
                 tabIndex={-1}
-                // Le lecteur YouTube met un instant à démarrer : on attend pour un fondu propre.
-                onLoad={() => setTimeout(() => setPreviewReady(true), 1200)}
+                onLoad={() => setTimeout(() => setPreviewReady(true), PREVIEW_FADE_DELAY_MS)}
               />
             )}
           </Show>
