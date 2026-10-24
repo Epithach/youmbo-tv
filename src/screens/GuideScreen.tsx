@@ -1,6 +1,7 @@
 import { createEffect, createMemo, createSignal, For, onCleanup, Show, untrack } from 'solid-js';
 import { app } from '../app-state';
 import { formatClock, loadEpgDay, type Programme } from '../core/epg';
+import { programmeStatus, STATUS_LABELS } from '../core/guide';
 import type { Channel } from '../core/m3u';
 import { catchupUrl } from '../core/xtream';
 import { clamp, useRemote } from '../ui/remote';
@@ -18,24 +19,6 @@ const MINUTE = 60_000;
 
 const floorToSlot = (time: number) =>
   Math.floor(time / (SLOT_MINUTES * MINUTE)) * SLOT_MINUTES * MINUTE;
-
-type Status = 'live' | 'replay' | 'past' | 'future';
-
-/** Où en est une émission : en direct, disponible en replay, passée ou à venir. */
-export function programmeStatus(programme: Programme, channel: Channel, now: number): Status {
-  if (programme.start <= now && now < programme.end) return 'live';
-  if (programme.start > now) return 'future';
-  const inArchive =
-    channel.archiveDays !== undefined && now - programme.start <= channel.archiveDays * 86_400_000;
-  return inArchive && programme.archived !== false ? 'replay' : 'past';
-}
-
-const STATUS_LABELS: Record<Status, string> = {
-  live: '● En direct · OK pour regarder',
-  replay: '↺ Replay disponible · OK pour regarder',
-  past: 'Émission passée',
-  future: 'À venir',
-};
 
 /**
  * Guide des programmes : chaînes × horaires, à la TiviMate.

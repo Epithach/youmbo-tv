@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Channel } from '../core/m3u';
-import { programmeStatus } from './GuideScreen';
+import { programmeStatus } from './guide';
+import type { Channel } from './m3u';
 
 const HOUR = 3_600_000;
 const now = 100 * HOUR;
