@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv, type Plugin } from 'vite';
 import solid from 'vite-plugin-solid';
 import { devProxy } from './tools/dev-proxy.ts';
+import { mockXtream } from './tools/mock-xtream/server.ts';
 
 /**
  * Les TV Samsung les plus anciennes qu'on vise (Tizen 6, ~2021) embarquent
@@ -30,6 +31,8 @@ export default defineConfig(({ mode }) => {
     plugins: [
       solid(),
       devProxy({ defaultPlaylistUrl: env.M3U_URL, userAgent: env.PROXY_USER_AGENT }),
+      // `npm run dev:mock` : faux serveur Xtream, pour développer sans fournisseur.
+      ...(mode === 'mock' ? [mockXtream()] : []),
       classicScript(),
     ],
     build: {

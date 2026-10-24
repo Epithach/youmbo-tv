@@ -8,7 +8,7 @@ import {
   type TrackList,
   type TrackType,
 } from '../../player';
-import { clamp, useRemote } from '../../ui/remote';
+import { clamp, pointerMoved, useRemote } from '../../ui/remote';
 import { ControlBar, Progress, TrackMenu, type ControlButton } from './PlayerControls';
 
 interface VodPlayerProps {
@@ -274,7 +274,7 @@ export function VodPlayer(props: VodPlayerProps) {
 
   return (
     // Souris : bouger affiche les commandes, cliquer sur l'image met en pause.
-    <div class="vod-player" onMouseMove={showControls}>
+    <div class="vod-player" onMouseMove={(event) => pointerMoved(event) && showControls()}>
       <video
         ref={(el) => (video = el)}
         class="vod-player__video"

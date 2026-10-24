@@ -28,20 +28,32 @@ Ouvre ensuite http://localhost:5173 et colle le lien de ta playlist M3U. Un lien
 
 Pour ne pas le recoller à chaque fois, copie `.env.example` en `.env.local` et renseigne `M3U_URL`. Ce fichier est ignoré par Git : **ne commite jamais ton lien M3U**, il contient en général tes identifiants.
 
+### Sans fournisseur : le serveur de test
+
+```bash
+npm run dev:mock
+```
+
+L'app s'ouvre sur http://localhost:5180, branchée sur un **faux serveur Xtream** servi par Vite (`tools/mock-xtream`). Il fournit un catalogue fictif : chaînes de plusieurs pays avec leur programme, films et séries par genre en français et en anglais, saisons, épisodes et affiches. Le direct simulé enchaîne les segments d'un flux de test public, et les films renvoient vers une bande-annonce libre de droits.
+
+C'est l'environnement des tests : aucun vrai fournisseur n'est contacté, donc pas de risque de se faire bloquer. Le port 5180 garde son propre stockage, séparé de l'app branchée sur ton vrai compte (port 5173).
+
 ### Pourquoi un proxy en dev ?
 
 Les serveurs IPTV n'envoient pas d'en-têtes CORS, donc un navigateur refuse de lire leurs playlists et leurs flux. En dev, toutes les requêtes passent par `/proxy?url=…`, servi par Vite sur ta machine (voir `tools/dev-proxy.ts`). Sur la TV, une app Tizen n'est pas soumise au CORS et appelle les URLs directement.
 
 ## Commandes
 
-| Commande            | Rôle                             |
-| ------------------- | -------------------------------- |
-| `npm run dev`       | Serveur de dev avec rechargement |
-| `npm run build`     | Build de production dans `dist/` |
-| `npm test`          | Tests unitaires (Vitest)         |
-| `npm run lint`      | ESLint                           |
-| `npm run typecheck` | Vérification TypeScript          |
-| `npm run format`    | Formatage Prettier               |
+| Commande            | Rôle                                                |
+| ------------------- | --------------------------------------------------- |
+| `npm run dev`       | Serveur de dev avec rechargement                    |
+| `npm run build`     | Build de production dans `dist/`                    |
+| `npm test`          | Tests unitaires (Vitest)                            |
+| `npm run test:e2e`  | Tests de bout en bout (Playwright, serveur de test) |
+| `npm run dev:mock`  | App branchée sur le serveur de test                 |
+| `npm run lint`      | ESLint                                              |
+| `npm run typecheck` | Vérification TypeScript                             |
+| `npm run format`    | Formatage Prettier                                  |
 
 ## Navigation
 
@@ -60,7 +72,8 @@ L'app se pilote entièrement au clavier, comme à la télécommande :
 
 ## CI/CD
 
-- **Pull request** : lint, format, types, tests, puis build. Le build est disponible en artefact.
+- **Pull request** : lint, format, types, tests unitaires, **tests de bout en bout sur le serveur de test**, puis build. Le build est disponible en artefact.
+- **Production** : aucun lien ni identifiant dans le code ou la pipeline. Le lien de la playlist est saisi au premier lancement et reste sur l'appareil.
 - **Tag `v*`** : création d'une GitHub Release avec le build.
 - **Dependabot** : mises à jour hebdomadaires des dépendances.
 

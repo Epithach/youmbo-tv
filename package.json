@@ -10,12 +10,14 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:mock": "vite --mode mock --port 5180 --strictPort",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "diagnose": "node tools/diagnose-playlist.ts"
@@ -27,6 +29,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
     "@types/node": "^26.6.5",
     "eslint": "^10.13.0",
     "eslint-plugin-solid": "^0.18.1",

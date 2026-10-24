@@ -1,4 +1,5 @@
 import { For, Show } from 'solid-js';
+import { pointerMoved } from '../../ui/remote';
 
 /** Affichage du lecteur VOD (sans logique) : progression, boutons, menu des pistes. */
 
@@ -64,7 +65,12 @@ export function ControlBar<Id extends string>(props: {
               'controls__button--focused': button.id === props.focused,
               'controls__button--disabled': button.disabled,
             }}
-            onMouseEnter={() => !button.disabled && props.onFocus(button.id)}
+            onMouseMove={(event) =>
+              pointerMoved(event) &&
+              !button.disabled &&
+              button.id !== props.focused &&
+              props.onFocus(button.id)
+            }
             onClick={() => !button.disabled && props.onPress(button.id)}
           >
             {button.label}

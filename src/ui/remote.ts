@@ -55,3 +55,14 @@ export function createSelection(count: () => number, initial = 0) {
   const move = (delta: number) => setIndex(clamp(index() + delta, 0, count() - 1));
   return { index, setIndex, move };
 }
+
+/**
+ * Vrai déplacement de la souris ? Chrome émet aussi des mouvements « fantômes »
+ * quand la page change sous un curseur immobile : on compare les positions.
+ */
+let lastPointer = { x: -1, y: -1 };
+export function pointerMoved(event: MouseEvent): boolean {
+  const moved = event.clientX !== lastPointer.x || event.clientY !== lastPointer.y;
+  lastPointer = { x: event.clientX, y: event.clientY };
+  return moved;
+}

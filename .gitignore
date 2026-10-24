@@ -1,6 +1,8 @@
 node_modules
 dist
 coverage
+test-results
+playwright-report
 *.log
 
 # Secrets locaux (lien M3U, identifiants) : jamais dans le repo
