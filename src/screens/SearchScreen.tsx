@@ -47,14 +47,14 @@ export function SearchScreen() {
   onMount(() => input?.focus());
 
   const country = () => app.country()?.code ?? '';
-  const [movies] = createResource(() => {
+  // Depuis la TV : les chaînes seulement ; depuis YoumboFlix : les films et séries.
+  const inTv = app.searchScope() === 'tv';
+  const catalog = (kind: 'movies' | 'series') => {
     const credentials = app.xtream();
-    return credentials ? loadSearchCatalog(credentials, 'movies', country()) : [];
-  });
-  const [series] = createResource(() => {
-    const credentials = app.xtream();
-    return credentials ? loadSearchCatalog(credentials, 'series', country()) : [];
-  });
+    return credentials && !inTv ? loadSearchCatalog(credentials, kind, country()) : [];
+  };
+  const [movies] = createResource(() => catalog('movies'));
+  const [series] = createResource(() => catalog('series'));
 
   const results = createMemo<Result[]>(() => {
     const q = query();
@@ -62,10 +62,9 @@ export function SearchScreen() {
     // Chaînes du pays d'abord, puis celles des autres pays.
     const local = app.country()?.channels ?? [];
     const localIds = new Set(local.map((c) => c.id));
-    const channels = [
-      ...local,
-      ...(app.playlist()?.channels ?? []).filter((c) => !localIds.has(c.id)),
-    ];
+    const channels = inTv
+      ? [...local, ...(app.playlist()?.channels ?? []).filter((c) => !localIds.has(c.id))]
+      : [];
     return [
       ...search(channels, q, (c) => c.name, LIMIT).map((channel) => ({
         type: 'channel' as const,
@@ -94,7 +93,7 @@ export function SearchScreen() {
   };
 
   useRemote((key) => {
-    if (key === 'back') return app.navigate('home');
+    if (key === 'back') return app.closeSearch();
     if (!inResults()) {
       if (key === 'down' && results().length > 0) {
         setInResults(true);
@@ -117,12 +116,14 @@ export function SearchScreen() {
 
   return (
     <div class="screen search">
-      <h1 class="screen__title">Recherche</h1>
+      <h1 class="screen__title">
+        {inTv ? 'Rechercher une chaîne' : 'Rechercher un film ou une série'}
+      </h1>
       <input
         ref={(el) => (input = el)}
         class="setup__input search__input"
         type="search"
-        placeholder="Une chaîne, un film, une série…"
+        placeholder={inTv ? 'Nom de la chaîne…' : 'Titre du film ou de la série…'}
         value={text()}
         onInput={(event) => onInput(event.currentTarget.value)}
         onFocus={() => setInResults(false)}

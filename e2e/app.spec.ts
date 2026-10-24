@@ -18,7 +18,7 @@ async function onboard(page: Page) {
   await expect(page.getByRole('heading', { name: 'Choisis ton pays' })).toBeVisible();
   await expect(page.locator('.list__row--selected')).toContainText('France');
   await press(page, 'Enter');
-  await expect(page.locator('.menu__item')).toHaveCount(4);
+  await expect(page.locator('.menu__item')).toHaveCount(3);
 }
 
 const rowTitles = (page: Page) => page.locator('.flix-row__title');
@@ -28,15 +28,10 @@ const activePosters = (page: Page) =>
 
 test('premier lancement : lien, pays puis accueil', async ({ page }) => {
   await onboard(page);
-  await expect(page.locator('.menu__label')).toHaveText([
-    'Télévision',
-    'YoumboFlix',
-    'Recherche',
-    'Paramètres',
-  ]);
+  await expect(page.locator('.menu__label')).toHaveText(['Télévision', 'YoumboFlix', 'Paramètres']);
   // Au lancement suivant, l'app ouvre directement l'accueil.
   await page.reload();
-  await expect(page.locator('.menu__item')).toHaveCount(4);
+  await expect(page.locator('.menu__item')).toHaveCount(3);
 });
 
 test('télévision : chaînes du pays, programme en cours et favoris', async ({ page }) => {
@@ -95,26 +90,45 @@ test('YoumboFlix : séries par genre, saisons et épisodes', async ({ page }) =>
   await expect(page.locator('.detail .list__row').first()).toContainText('1. Épisode 1');
 });
 
-test('recherche : un film et une chaîne', async ({ page }) => {
+test('recherche dans la TV : chaînes seulement', async ({ page }) => {
   await onboard(page);
-  await press(page, 'ArrowRight', 'ArrowRight', 'Enter');
-  await expect(page.getByRole('heading', { name: 'Recherche' })).toBeVisible();
-
-  await page.locator('.search__input').fill('phare');
-  await expect(page.locator('.list__row').first()).toContainText('Film');
-  await expect(page.locator('.list__row').first()).toContainText('Le Phare');
+  await press(page, 'Enter', 'ArrowLeft', 'ArrowUp', 'Enter');
+  await expect(page.getByRole('heading', { name: 'Rechercher une chaîne' })).toBeVisible();
 
   await page.locator('.search__input').fill('chaine une');
   await expect(page.locator('.list__row').first()).toContainText('FR - Chaîne Une');
+  await page.locator('.search__input').fill('phare');
+  await expect(page.locator('.search__status')).toContainText('Aucun résultat');
 
-  // ↓ puis OK : la chaîne se lance dans la TV.
+  // ↓ puis OK sur une chaîne : elle se lance dans la TV.
+  await page.locator('.search__input').fill('chaine une');
+  await expect(page.locator('.list__row').first()).toContainText('Chaîne Une');
   await press(page, 'ArrowDown', 'Enter');
   await expect(page.locator('.column--channels .row__badge')).toBeVisible();
 });
 
+test('recherche dans YoumboFlix : films et séries seulement', async ({ page }) => {
+  await onboard(page);
+  await press(page, 'ArrowRight', 'Enter');
+  await expect(rowTitles(page).first()).toBeVisible();
+  await press(page, 'ArrowUp', 'ArrowRight', 'ArrowRight', 'Enter');
+  await expect(
+    page.getByRole('heading', { name: 'Rechercher un film ou une série' }),
+  ).toBeVisible();
+
+  await page.locator('.search__input').fill('phare');
+  await expect(page.locator('.list__row').first()).toContainText('Le Phare');
+  await page.locator('.search__input').fill('chaine une');
+  await expect(page.locator('.search__status')).toContainText('Aucun résultat');
+
+  // Retour : on revient dans YoumboFlix.
+  await press(page, 'Escape');
+  await expect(page.locator('.flix__brand')).toBeVisible();
+});
+
 test('paramètres : changer de pays', async ({ page }) => {
   await onboard(page);
-  await press(page, 'ArrowRight', 'ArrowRight', 'ArrowRight', 'Enter');
+  await press(page, 'ArrowRight', 'ArrowRight', 'Enter');
   await expect(page.getByRole('heading', { name: 'Paramètres' })).toBeVisible();
 
   await press(page, 'ArrowDown', 'Enter');

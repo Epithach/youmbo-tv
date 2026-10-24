@@ -9,6 +9,8 @@ import { parseXtreamUrl } from './core/xtream';
 
 export type Screen = 'boot' | 'setup' | 'country' | 'home' | 'settings' | 'tv' | 'flix' | 'search';
 
+export type SearchScope = 'tv' | 'flix';
+
 /** Ce qu'un écran doit ouvrir en arrivant (résultat choisi dans la recherche). */
 export type PendingOpen =
   { kind: 'channel'; channel: Channel } | { kind: 'catalog'; item: CatalogItem };
@@ -31,6 +33,8 @@ function createAppState() {
   /** Écran où revenir après une modification depuis les paramètres. */
   const [returnTo, setReturnTo] = createSignal<Screen>();
   const [pending, setPending] = createSignal<PendingOpen>();
+  /** Recherche ouverte depuis la TV (chaînes) ou depuis YoumboFlix (films et séries). */
+  const [searchScope, setSearchScope] = createSignal<SearchScope>('tv');
 
   const countries = createMemo<CountryEntry[]>(() => {
     const current = playlist();
@@ -109,6 +113,14 @@ function createAppState() {
     setScreen('setup');
   }
 
+  function openSearch(scope: SearchScope) {
+    setSearchScope(scope);
+    setScreen('search');
+  }
+
+  /** Retour de la recherche vers la partie d'où elle a été ouverte. */
+  const closeSearch = () => setScreen(searchScope());
+
   /** Ouvre un résultat de recherche : la TV pour une chaîne, YoumboFlix pour un titre. */
   function openResult(target: PendingOpen) {
     setPending(target);
@@ -128,6 +140,9 @@ function createAppState() {
     navigate: setScreen,
     openResult,
     takePending,
+    searchScope,
+    openSearch,
+    closeSearch,
     playlist,
     playlistUrl,
     countries,

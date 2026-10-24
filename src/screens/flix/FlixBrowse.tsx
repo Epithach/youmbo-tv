@@ -31,6 +31,8 @@ const TABS: { kind: CatalogKind; label: string }[] = [
   { kind: 'movies', label: 'Films' },
   { kind: 'series', label: 'Séries' },
 ];
+/** Dernier « onglet » : ouvre la recherche de films et séries (ce n'est pas un catalogue). */
+const SEARCH_TAB = TABS.length;
 
 /** Position dans l'accueil YoumboFlix, conservée quand on ouvre une fiche. */
 export interface BrowsePosition {
@@ -119,6 +121,8 @@ export function FlixBrowse(props: FlixBrowseProps) {
     props.onPositionChange({ ...props.position, ...next });
   const setRow = (value: number) => update({ rows: { ...props.position.rows, [kind()]: value } });
 
+  const [onSearchTab, setOnSearchTab] = createSignal(false);
+
   // Actions communes à la télécommande et à la souris.
   const selectTab = (tab: CatalogKind, row = props.position.rows[tab]) =>
     update({ tab, rows: { ...props.position.rows, [tab]: row } });
@@ -138,11 +142,18 @@ export function FlixBrowse(props: FlixBrowseProps) {
 
     // Barre d'onglets : ← → changent d'onglet, ↓ redescend dans les rangées.
     if (row() === -1) {
-      const tab = TABS.findIndex((t) => t.kind === kind());
+      const tab = onSearchTab() ? SEARCH_TAB : TABS.findIndex((t) => t.kind === kind());
       if (key === 'left' || key === 'right') {
-        return selectTab(TABS[clamp(tab + (key === 'left' ? -1 : 1), 0, TABS.length - 1)].kind, -1);
+        const next = clamp(tab + (key === 'left' ? -1 : 1), 0, SEARCH_TAB);
+        setOnSearchTab(next === SEARCH_TAB);
+        if (next !== SEARCH_TAB) selectTab(TABS[next].kind, -1);
+        return;
       }
-      if (key === 'down' || key === 'ok') return setRow(0);
+      if (onSearchTab() && key === 'ok') return app.openSearch('flix');
+      if (key === 'down' || key === 'ok') {
+        setOnSearchTab(false);
+        return setRow(0);
+      }
       if (key === 'back') return app.navigate('home');
       return;
     }
@@ -184,13 +195,20 @@ export function FlixBrowse(props: FlixBrowseProps) {
             {(tab) => (
               <span
                 class="flix__tab"
-                classList={{ 'flix__tab--selected': tab.kind === kind() }}
+                classList={{ 'flix__tab--selected': tab.kind === kind() && !onSearchTab() }}
                 onClick={() => selectTab(tab.kind)}
               >
                 {tab.label}
               </span>
             )}
           </For>
+          <span
+            class="flix__tab"
+            classList={{ 'flix__tab--selected': onSearchTab() }}
+            onClick={() => app.openSearch('flix')}
+          >
+            🔍 Recherche
+          </span>
         </nav>
       </header>
 
