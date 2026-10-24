@@ -132,12 +132,29 @@ test('YoumboFlix : bannière, note, âge, bande-annonce et titres similaires', a
   await press(page, 'ArrowDown', 'ArrowRight', 'Enter');
   await expect(page.locator('.detail__title')).not.toHaveText('L’Ombre du Nord (2000)');
 
-  // Bande-annonce : ouverte puis fermée par Retour.
+  // Bande-annonce : ouverte puis fermée par Retour (le bouton arrive avec la fiche).
+  await expect(page.locator('.detail .menu__label')).toContainText(['▶ Bande-annonce']);
   await press(page, 'ArrowUp', 'ArrowRight', 'ArrowRight', 'Enter');
   await expect(page.locator('.trailer iframe')).toHaveAttribute('src', /youtube/);
   await press(page, 'Escape');
   await expect(page.locator('.trailer')).toHaveCount(0);
   await expect(page.locator('.detail__title')).toBeVisible();
+});
+
+test('YoumboFlix : bande-annonce en fond de la bannière après 3 s', async ({ page }) => {
+  await onboard(page);
+  await press(page, 'ArrowRight', 'Enter');
+  await expect(rowTitles(page).first()).toBeVisible();
+
+  // Rien tout de suite, puis la bande-annonce YouTube (muette) après l'attente.
+  await expect(page.locator('.hero__preview')).toHaveCount(0);
+  await expect(page.locator('.hero__preview')).toHaveAttribute('src', /youtube-nocookie.*mute=1/, {
+    timeout: 8000,
+  });
+
+  // Changer de titre l'arrête.
+  await press(page, 'ArrowRight');
+  await expect(page.locator('.hero__preview')).toHaveCount(0);
 });
 
 test('YoumboFlix : séries par genre, saisons et épisodes', async ({ page }) => {

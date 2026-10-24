@@ -232,6 +232,7 @@ export const series: Series[] = seriesCategories.flatMap((c, ci) =>
       rating: String(6 + (n % 4)),
       category_id: c.category_id,
       backdrop_path: [`/mock-photo/backdrop-${id}.svg`],
+      youtube_trailer: SAMPLE_TRAILER,
     };
   }),
 );

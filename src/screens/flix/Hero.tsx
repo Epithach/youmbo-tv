@@ -6,6 +6,14 @@ import { Badges } from './FlixParts';
 
 /** Attente avant de demander la fiche d'un film sélectionné (pas pendant un défilement). */
 const DETAILS_DELAY_MS = 500;
+/** Attente sur un titre avant d'en lancer la bande-annonce en fond, à la Netflix. */
+const PREVIEW_DELAY_MS = 3000;
+
+/** Lecteur YouTube sans cookies, muet, sans commandes, en boucle : un fond animé. */
+const previewUrl = (id: string) =>
+  `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}` +
+  `?autoplay=1&mute=1&controls=0&loop=1&playlist=${encodeURIComponent(id)}` +
+  '&modestbranding=1&rel=0&playsinline=1&disablekb=1';
 
 export const HERO_BUTTONS = ['▶ Lecture', 'Plus d’infos'] as const;
 
@@ -40,6 +48,21 @@ export function Hero(props: HeroProps) {
 
   /** Fiche du film affiché (pas celle d'un film vu juste avant). */
   const movie = () => (info()?.id === props.item?.id ? info()?.info : undefined);
+
+  // Bande-annonce en fond après 3 s sur le même titre ; elle s'arrête dès qu'on bouge.
+  const trailerId = () => movie()?.youtube_trailer || props.item?.trailer;
+  const [preview, setPreview] = createSignal<string>();
+  const [previewReady, setPreviewReady] = createSignal(false);
+  createEffect(() => {
+    // Changer de titre relance le délai, même si la bande-annonce est la même.
+    void props.item?.id;
+    const id = trailerId();
+    setPreview(undefined);
+    setPreviewReady(false);
+    if (!id) return;
+    const timer = setTimeout(() => setPreview(id), PREVIEW_DELAY_MS);
+    onCleanup(() => clearTimeout(timer));
+  });
   const backdrop = () =>
     resizePoster(firstImage(movie()?.backdrop_path) ?? props.item?.backdrop, 1280);
   const plot = () => movie()?.plot || movie()?.description || props.item?.plot;
@@ -50,6 +73,20 @@ export function Hero(props: HeroProps) {
         <section class="hero" classList={{ 'hero--focused': props.focused }}>
           <Show when={backdrop()}>
             {(src) => <img class="hero__backdrop" src={src()} alt="" />}
+          </Show>
+          <Show when={preview()}>
+            {(id) => (
+              <iframe
+                class="hero__preview"
+                classList={{ 'hero__preview--ready': previewReady() }}
+                src={previewUrl(id())}
+                title="Bande-annonce"
+                allow="autoplay; encrypted-media"
+                tabIndex={-1}
+                // Le lecteur YouTube met un instant à démarrer : on attend pour un fondu propre.
+                onLoad={() => setTimeout(() => setPreviewReady(true), 1200)}
+              />
+            )}
           </Show>
           <div class="hero__content">
             <h1 class="hero__title">{displayTitle(movie()?.name || item().name)}</h1>

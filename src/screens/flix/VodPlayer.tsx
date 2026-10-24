@@ -19,7 +19,7 @@ interface VodPlayerProps {
   onExit: () => void;
   /** Fin de la vidéo : enchaîne sur l'épisode suivant s'il y en a un. */
   onEnded?: () => void;
-  /** Pour « Continuer à regarder » : ce qui est enregistré avec la position. */
+  /** Pour « Reprendre » : ce qui est enregistré avec la position. */
   progress?: Omit<WatchProgress, 'position' | 'duration' | 'updatedAt'>;
   /** Reprendre à cette position (secondes). */
   startAt?: number;
