@@ -84,6 +84,7 @@ export interface SeriesItem {
   plot?: string;
   backdrop_path?: string[] | string;
   releaseDate?: string;
+  youtube_trailer?: string;
 }
 
 export interface SeriesEpisode {
@@ -140,13 +141,15 @@ export interface CatalogItem {
   genres: string[];
   /** Date d'ajout ou de mise à jour (secondes), pour trier les plus récents. */
   added: number;
-  /** « Continuer à regarder » : avancement (0 à 1), affiché sous l'affiche. */
+  /** « Reprendre » : avancement (0 à 1), affiché sous l'affiche. */
   progress?: number;
   /** Séries : de quoi remplir la bannière sans requête supplémentaire. */
   plot?: string;
   backdrop?: string;
   genreText?: string;
   year?: string;
+  /** Identifiant YouTube de la bande-annonce (séries : déjà dans la liste). */
+  trailer?: string;
 }
 
 const ACTIONS: Record<CatalogKind, { categories: string; items: string }> = {
@@ -184,6 +187,7 @@ function toCatalogItem(kind: CatalogKind, raw: VodItem | SeriesItem): CatalogIte
     backdrop: firstImage(series.backdrop_path),
     genreText: series.genre || undefined,
     year: series.releaseDate?.slice(0, 4),
+    trailer: series.youtube_trailer || undefined,
   };
 }
 

@@ -901,7 +901,7 @@ body {
   margin: 16px 0 4px;
 }
 
-/* Avancement sous l'affiche (« Continuer à regarder »). */
+/* Avancement sous l'affiche (« Reprendre »). */
 .poster__progress {
   height: 4px;
   margin-top: 4px;
@@ -1490,4 +1490,23 @@ body {
   border-color: var(--accent);
   background: var(--accent);
   color: #fff;
+}
+
+/* Bande-annonce en fond de la bannière (après 3 s sur un titre). */
+.hero__preview {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 75%;
+  height: 100%;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 40%);
+  mask-image: linear-gradient(to right, transparent, #000 40%);
+  transition: opacity 1s ease;
+}
+
+.hero__preview--ready {
+  opacity: 1;
 }

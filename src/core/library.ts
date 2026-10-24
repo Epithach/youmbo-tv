@@ -5,7 +5,7 @@ import { loadJson, saveJson } from './storage';
 
 /**
  * Bibliothèque personnelle, gardée sur l'appareil : favoris (films, séries,
- * chaînes) et positions de lecture pour « Continuer à regarder ».
+ * chaînes) et positions de lecture pour « Reprendre ».
  */
 
 /** Où on s'est arrêté dans un film ou un épisode. */
@@ -99,7 +99,7 @@ function createLibrary() {
     },
 
     /**
-     * « Continuer à regarder » : films entamés, ou séries avec leur dernier
+     * « Reprendre » : films entamés, ou séries avec leur dernier
      * épisode entamé, du plus récent au plus ancien.
      */
     continueWatching(kind: CatalogKind): WatchProgress[] {
