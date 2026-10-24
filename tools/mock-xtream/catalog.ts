@@ -191,6 +191,20 @@ export const seriesCategories = [
   category(202, 'SRS - NETFLIX [FR]'),
   category(203, 'SRS - ENFANTS [FR]'),
   category(204, 'SRS - DRAMA [EN]'),
+  category(205, 'SRS - MANGA [FR]'),
+];
+
+/**
+ * Animés (seuls les titres sont réels) : de quoi tester la musique de fond des
+ * fiches, qui va chercher l'opening de la saison sur AnimeThemes.
+ */
+const ANIME_TITLES = [
+  'Jujutsu Kaisen (2020) (JP)',
+  'Spy x Family (2022) (JP)',
+  'One Piece (1999) (JP)',
+  'Naruto (2002) (JP)',
+  'Demon Slayer (2019) (JP)',
+  'Frieren (2023) (JP)',
 ];
 
 const SERIES_GENRES = [
@@ -216,17 +230,21 @@ export interface Series {
 }
 
 export const series: Series[] = seriesCategories.flatMap((c, ci) =>
-  Array.from({ length: 10 }, (_, i) => {
+  Array.from({ length: c.category_id === '205' ? ANIME_TITLES.length : 10 }, (_, i) => {
     const n = ci * 10 + i;
     const english = c.category_name.endsWith('[EN]');
     const id = 8000 + n;
+    const title =
+      c.category_id === '205'
+        ? ANIME_TITLES[i]
+        : `${movieTitle(n + 7, english)} (${2015 + (n % 11)})`;
     return {
       num: n + 1,
-      name: `${english ? 'EN' : 'FR'} - ${movieTitle(n + 7, english)} (${2015 + (n % 11)})`,
+      name: `${english ? 'EN' : 'FR'} - ${title}`,
       series_id: id,
       cover: `/mock-photo/poster-${id}.svg`,
       plot: 'Série de démonstration du faux serveur Xtream.',
-      genre: c.category_id === '203' ? 'Animation, Kids' : pick(SERIES_GENRES, n),
+      genre: ['203', '205'].includes(c.category_id) ? 'Animation, Kids' : pick(SERIES_GENRES, n),
       releaseDate: `${2015 + (n % 11)}-01-01`,
       last_modified: added(n),
       rating: String(6 + (n % 4)),

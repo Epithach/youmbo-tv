@@ -11,6 +11,7 @@ import { library, progressKey } from '../../core/library';
 import type { XtreamCredentials } from '../../core/xtream';
 import { Menu, pressMenuItem, type MenuItem } from '../../ui/Menu';
 import { clamp, useRemote } from '../../ui/remote';
+import { DetailMusic } from './DetailMusic';
 import { Badges, PosterStrip, Trailer } from './FlixParts';
 import { formatTime } from './PlayerControls';
 
@@ -131,6 +132,13 @@ export function MovieDetail(props: MovieDetailProps) {
           />
         </div>
       </div>
+      <DetailMusic
+        credentials={props.credentials}
+        item={props.item}
+        year={Number(info()?.releasedate?.slice(0, 4)) || undefined}
+        trailerId={info()?.youtube_trailer}
+        paused={trailer()}
+      />
       <Show when={trailer() && info()?.youtube_trailer}>
         {(id) => <Trailer youtubeId={id()} onClose={() => setTrailer(false)} />}
       </Show>

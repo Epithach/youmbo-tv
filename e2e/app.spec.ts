@@ -157,6 +157,25 @@ test('YoumboFlix : bande-annonce en fond de la bannière après 3 s', async ({ p
   await expect(page.locator('.hero__preview')).toHaveCount(0);
 });
 
+test('fiche film : la bande-annonce joue en musique de fond, avec le son', async ({ page }) => {
+  await onboard(page);
+  await press(page, 'ArrowRight', 'Enter');
+  await expect(rowTitles(page).first()).toBeVisible();
+  await press(page, 'ArrowDown');
+  await activePosters(page);
+  await press(page, 'Enter');
+  await expect(page.locator('.detail__title')).toBeVisible();
+
+  // Après un court délai, la bande-annonce (non muette) démarre derrière la fiche.
+  const music = page.locator('.detail__music-video');
+  await expect(music).toHaveAttribute('src', /youtube-nocookie.*autoplay=1/, { timeout: 8000 });
+  await expect(music).not.toHaveAttribute('src', /mute=1/);
+
+  // Quitter la fiche coupe la musique.
+  await press(page, 'Escape');
+  await expect(music).toHaveCount(0);
+});
+
 test('YoumboFlix : séries par genre, saisons et épisodes', async ({ page }) => {
   await onboard(page);
   await press(page, 'ArrowRight', 'Enter');

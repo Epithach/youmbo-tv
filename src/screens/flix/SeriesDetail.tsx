@@ -13,6 +13,7 @@ import type { XtreamCredentials } from '../../core/xtream';
 import { Marquee } from '../../ui/Marquee';
 import { clamp, useRemote } from '../../ui/remote';
 import { WindowedList } from '../../ui/WindowedList';
+import { DetailMusic } from './DetailMusic';
 import { Badges, PosterStrip, Trailer } from './FlixParts';
 import { formatTime } from './PlayerControls';
 
@@ -239,6 +240,13 @@ export function SeriesDetail(props: SeriesDetailProps) {
           />
         </div>
       </div>
+      <DetailMusic
+        credentials={props.credentials}
+        item={props.item}
+        season={season()?.number}
+        trailerId={info()?.youtube_trailer || props.item.trailer}
+        paused={trailer()}
+      />
       <Show when={trailer() && info()?.youtube_trailer}>
         {(id) => <Trailer youtubeId={id()} onClose={() => setTrailer(false)} />}
       </Show>

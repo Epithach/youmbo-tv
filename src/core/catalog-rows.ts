@@ -25,7 +25,7 @@ export function libraryRows(kind: CatalogKind): CatalogRow[] {
   if (continueItems().length > 0) {
     rows.push({
       key: 'library:continue',
-      title: 'Reprendre',
+      title: 'Continuer à regarder',
       load: async () => continueItems(),
       live: continueItems,
     });
