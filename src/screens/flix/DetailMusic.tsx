@@ -7,8 +7,8 @@ import { YoutubeBackground } from '../../ui/YoutubeBackground';
 
 /** Attente avant la bande-annonce : pas pour une fiche ouverte puis quittée aussitôt. */
 const START_DELAY_MS = 1000;
-/** La bande-annonce apparaît, avec le son en fondu, 7 s après l'ouverture de la fiche. */
-const TRAILER_REVEAL_MS = 7000 - START_DELAY_MS;
+/** La bande-annonce apparaît, avec le son en fondu, 6 s après l'ouverture de la fiche. */
+const TRAILER_REVEAL_MS = 6000 - START_DELAY_MS;
 /** La musique de fond reste un peu en retrait du volume choisi pour les vidéos. */
 const MUSIC_VOLUME = 0.6;
 
