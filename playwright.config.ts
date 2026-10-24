@@ -20,7 +20,9 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'npm run dev:mock',
+    // Vite lancé directement (et non via npm) : sous Windows, Playwright n'arrête que le
+    // processus qu'il a démarré, et un `npm run` laissait tourner Vite sur le port 5180.
+    command: `node node_modules/vite/bin/vite.js --mode mock --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
