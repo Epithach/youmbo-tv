@@ -7,8 +7,8 @@ import { YoutubeBackground } from '../../ui/YoutubeBackground';
 
 /** Attente avant la bande-annonce : pas pour une fiche ouverte puis quittée aussitôt. */
 const START_DELAY_MS = 1000;
-/** La bande-annonce apparaît, avec le son en fondu, 5 s après l'ouverture de la fiche. */
-const TRAILER_REVEAL_MS = 5000 - START_DELAY_MS;
+/** La bande-annonce apparaît, avec le son en fondu, 7 s après l'ouverture de la fiche. */
+const TRAILER_REVEAL_MS = 7000 - START_DELAY_MS;
 /** La musique de fond reste un peu en retrait du volume choisi pour les vidéos. */
 const MUSIC_VOLUME = 0.6;
 
@@ -56,14 +56,19 @@ interface DetailMusicProps {
  * ne servant que si aucun opening n'est trouvé.
  */
 export function DetailMusic(props: DetailMusicProps) {
-  const [anime] = createResource(
-    () => props.item,
-    (item) => isAnime(props.credentials, item),
-  );
+  // Clés en texte : changer d'épisode (même titre, même saison) ne relance rien,
+  // et l'opening tiré au hasard reste le même jusqu'au changement de saison.
+  const titleKey = () => `${props.item.kind}:${props.item.id}`;
+  const [anime] = createResource(titleKey, () => isAnime(props.credentials, props.item));
   const [opening] = createResource(
-    () => anime() && { item: props.item, season: props.season, year: props.year },
-    async ({ item, season, year }) =>
-      pickOpening(await findOpenings(item.name, { kind: item.kind, season, year }), Math.random()),
+    () => anime() && `${titleKey()}|${props.season ?? ''}|${props.year ?? ''}`,
+    async () => {
+      const { item, season, year } = props;
+      return pickOpening(
+        await findOpenings(item.name, { kind: item.kind, season, year }),
+        Math.random(),
+      );
+    },
   );
 
   // Changer de titre ou de saison relance le délai et le fondu.
