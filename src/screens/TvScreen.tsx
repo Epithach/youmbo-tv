@@ -11,6 +11,8 @@ import { ChannelInfo } from './tv/ChannelInfo';
 
 const ALL_GROUPS = 'Toutes les chaînes';
 const FAVORITES = '★ Favoris';
+/** Entrée « onglet » en tête des catégories : ouvre la recherche de chaînes. */
+const SEARCH = '🔍 Recherche';
 const VISIBLE_ROWS = 14;
 
 type Column = 'groups' | 'channels';
@@ -18,7 +20,8 @@ type Column = 'groups' | 'channels';
 /** Télévision en direct, limitée au pays choisi dans les paramètres. */
 export function TvScreen() {
   const [column, setColumn] = createSignal<Column>('channels');
-  const [groupIndex, setGroupIndex] = createSignal(0);
+  // Index 1 : « Toutes les chaînes » (l'index 0 est l'onglet Recherche).
+  const [groupIndex, setGroupIndex] = createSignal(1);
   const [channelIndex, setChannelIndex] = createSignal(0);
   const [playing, setPlaying] = createSignal<Channel>();
   const [playerState, setPlayerState] = createSignal<PlayerState>('idle');
@@ -32,6 +35,7 @@ export function TvScreen() {
     return (app.playlist()?.channels ?? []).filter((channel) => keys.has(channelKey(channel)));
   });
   const groups = createMemo(() => [
+    SEARCH,
     ALL_GROUPS,
     ...(favorites().length > 0 ? [FAVORITES] : []),
     ...(app.country()?.groups ?? []),
@@ -48,7 +52,7 @@ export function TvScreen() {
   });
   const channels = createMemo(() => {
     const group = groups()[groupIndex()];
-    if (group === ALL_GROUPS) return app.country()?.channels ?? [];
+    if (group === ALL_GROUPS || group === SEARCH) return app.country()?.channels ?? [];
     if (group === FAVORITES) return favorites();
     return channelsByGroup().get(group) ?? [];
   });
@@ -103,6 +107,9 @@ export function TvScreen() {
       case 'left':
         return setColumn('groups');
       case 'right': {
+        if (column() === 'groups' && groups()[groupIndex()] === SEARCH) {
+          return app.openSearch('tv');
+        }
         // Déjà dans les chaînes : → ajoute ou retire la chaîne des favoris.
         if (column() !== 'channels') return setColumn('channels');
         const channel = channels()[channelIndex()];
@@ -110,6 +117,9 @@ export function TvScreen() {
         return;
       }
       case 'ok': {
+        if (column() === 'groups' && groups()[groupIndex()] === SEARCH) {
+          return app.openSearch('tv');
+        }
         if (column() === 'groups') return setColumn('channels');
         const channel = channels()[channelIndex()];
         if (channel) playChannel(channel);
@@ -150,6 +160,7 @@ export function TvScreen() {
           visibleRows={VISIBLE_ROWS}
           onSelect={(index) => {
             setColumn('groups');
+            if (groups()[index] === SEARCH) return app.openSearch('tv');
             if (index !== groupIndex()) selectGroup(index);
           }}
         >
