@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { UNGROUPED } from './m3u';
-import { buildXtreamPlaylist, parseXtreamUrl, xtreamApiUrl } from './xtream';
+import { buildXtreamPlaylist, catchupUrl, parseXtreamUrl, xtreamApiUrl } from './xtream';
 
 const credentials = { server: 'http://iptv.example.com:8080', username: 'user', password: 'pa ss' };
 
@@ -81,6 +81,16 @@ describe('buildXtreamPlaylist', () => {
   it('pointe vers le guide XMLTV du fournisseur', () => {
     expect(playlist.epgUrl).toBe(
       'http://iptv.example.com:8080/xmltv.php?username=user&password=pa+ss',
+    );
+  });
+});
+
+describe('catchupUrl', () => {
+  it('construit l’adresse du replay (durée en minutes, début en heure locale)', () => {
+    const start = new Date(2026, 9, 24, 12, 0).getTime();
+    const end = new Date(2026, 9, 24, 12, 30).getTime();
+    expect(catchupUrl(credentials, 1001, start, end)).toBe(
+      'http://iptv.example.com:8080/timeshift/user/pa%20ss/30/2026-10-24:12-00/1001.ts',
     );
   });
 });

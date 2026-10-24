@@ -8,6 +8,8 @@ export interface Channel {
   tvgId?: string;
   /** Identifiant Xtream de la chaîne : sert à demander son programme (EPG). */
   streamId?: number;
+  /** Replay disponible sur ce nombre de jours (absent : pas de replay). */
+  archiveDays?: number;
 }
 
 export interface Playlist {

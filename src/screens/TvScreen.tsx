@@ -5,29 +5,43 @@ import { channelKey, library } from '../core/library';
 import type { Channel } from '../core/m3u';
 import { createPlayer, type Player, type PlayerState } from '../player';
 import { Marquee } from '../ui/Marquee';
-import { clamp, useRemote } from '../ui/remote';
+import { clamp, isDigit, useRemote } from '../ui/remote';
 import { WindowedList } from '../ui/WindowedList';
 import { ChannelInfo } from './tv/ChannelInfo';
 
 const ALL_GROUPS = 'Toutes les chaînes';
 const FAVORITES = '★ Favoris';
-/** Entrée « onglet » en tête des catégories : ouvre la recherche de chaînes. */
+/** Entrées « onglets » en tête des catégories : elles ouvrent un autre écran. */
 const SEARCH = '🔍 Recherche';
+const GUIDE = '📅 Guide TV';
 const VISIBLE_ROWS = 14;
+/** Saisie d'un numéro de chaîne : délai après le dernier chiffre, et chiffres au plus. */
+const NUMBER_DELAY_MS = 1500;
+const NUMBER_MAX_DIGITS = 4;
+/** Durée du bandeau au zapping. */
+const BANNER_MS = 3000;
 
 type Column = 'groups' | 'channels';
 
-/** Télévision en direct, limitée au pays choisi dans les paramètres. */
+/**
+ * Télévision en direct, limitée au pays choisi dans les paramètres.
+ * Chaque chaîne a un numéro (sa place dans le pays) : taper ce numéro y va.
+ * En plein écran, ↑ ↓ zappent et un bandeau rappelle la chaîne et le programme.
+ */
 export function TvScreen() {
   const [column, setColumn] = createSignal<Column>('channels');
-  // Index 1 : « Toutes les chaînes » (l'index 0 est l'onglet Recherche).
-  const [groupIndex, setGroupIndex] = createSignal(1);
+  // Index 2 : « Toutes les chaînes » (0 et 1 sont la Recherche et le Guide).
+  const [groupIndex, setGroupIndex] = createSignal(2);
   const [channelIndex, setChannelIndex] = createSignal(0);
   const [playing, setPlaying] = createSignal<Channel>();
+  const [replayTitle, setReplayTitle] = createSignal<string>();
   const [playerState, setPlayerState] = createSignal<PlayerState>('idle');
   const [playerMessage, setPlayerMessage] = createSignal<string>();
   const [fullscreen, setFullscreen] = createSignal(false);
+  const [banner, setBanner] = createSignal(false);
+  const [typedNumber, setTypedNumber] = createSignal('');
 
+  const countryChannels = () => app.country()?.channels ?? [];
   // Favoris : toutes les chaînes marquées, quel que soit leur pays.
   const favorites = createMemo(() => {
     const keys = new Set(library.favoriteChannelKeys());
@@ -36,6 +50,7 @@ export function TvScreen() {
   });
   const groups = createMemo(() => [
     SEARCH,
+    GUIDE,
     ALL_GROUPS,
     ...(favorites().length > 0 ? [FAVORITES] : []),
     ...(app.country()?.groups ?? []),
@@ -43,7 +58,7 @@ export function TvScreen() {
   // Chaînes rangées par catégorie une seule fois, pas à chaque changement de catégorie.
   const channelsByGroup = createMemo(() => {
     const byGroup = new Map<string, Channel[]>();
-    for (const channel of app.country()?.channels ?? []) {
+    for (const channel of countryChannels()) {
       const list = byGroup.get(channel.group);
       if (list) list.push(channel);
       else byGroup.set(channel.group, [channel]);
@@ -52,10 +67,11 @@ export function TvScreen() {
   });
   const channels = createMemo(() => {
     const group = groups()[groupIndex()];
-    if (group === ALL_GROUPS || group === SEARCH) return app.country()?.channels ?? [];
     if (group === FAVORITES) return favorites();
-    return channelsByGroup().get(group) ?? [];
+    return channelsByGroup().get(group) ?? countryChannels();
   });
+  /** Numéro de chaîne : sa place dans la liste du pays, à partir de 1. */
+  const numbers = createMemo(() => new Map(countryChannels().map((c, i) => [c.id, i + 1])));
 
   const toggleFavorite = (channel: Channel) => {
     library.toggleFavoriteChannel(channel);
@@ -71,24 +87,80 @@ export function TvScreen() {
 
   let video: HTMLVideoElement | undefined;
   let player: Player | undefined;
+  let bannerTimer: ReturnType<typeof setTimeout> | undefined;
+  let numberTimer: ReturnType<typeof setTimeout> | undefined;
+  onCleanup(() => {
+    clearTimeout(bannerTimer);
+    clearTimeout(numberTimer);
+  });
+
+  const showBanner = () => {
+    setBanner(true);
+    clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(() => setBanner(false), BANNER_MS);
+  };
+
+  /** Lance une chaîne (ou un replay de cette chaîne) sans changer de vue. */
+  const tune = (channel: Channel, url = channel.url, replay?: string) => {
+    setPlaying(channel);
+    setReplayTitle(replay);
+    player?.play(url);
+    showBanner();
+  };
 
   const playChannel = (channel: Channel) => {
-    if (playing()?.id === channel.id) {
+    if (playing()?.id === channel.id && !replayTitle()) {
       setFullscreen(true);
+      showBanner();
       return;
     }
-    setPlaying(channel);
-    player?.play(channel.url);
+    tune(channel);
+  };
+
+  /** Zapping en plein écran : chaîne précédente ou suivante de la liste affichée. */
+  const zap = (delta: number) => {
+    const list = channels();
+    if (list.length === 0) return;
+    const current = list.findIndex((c) => c.id === playing()?.id);
+    const next = (Math.max(0, current) + delta + list.length) % list.length;
+    setChannelIndex(next);
+    tune(list[next]);
+  };
+
+  /** Numéro tapé : on y va après un court délai (ou dès le 4e chiffre). */
+  /** Va à la chaîne dont le numéro vient d'être tapé. */
+  const goToTypedNumber = () => {
+    const index = Number(typedNumber()) - 1;
+    setTypedNumber('');
+    const channel = countryChannels()[index];
+    if (!channel) return;
+    setGroupIndex(groups().indexOf(ALL_GROUPS));
+    setChannelIndex(index);
+    tune(channel);
+  };
+
+  const typeDigit = (digit: string) => {
+    setTypedNumber((typedNumber() + digit).slice(0, NUMBER_MAX_DIGITS));
+    clearTimeout(numberTimer);
+    if (typedNumber().length >= NUMBER_MAX_DIGITS) goToTypedNumber();
+    else numberTimer = setTimeout(goToTypedNumber, NUMBER_DELAY_MS);
   };
 
   const selectGroup = (index: number) => {
+    // Les « onglets » ouvrent leur écran au lieu de changer la liste.
+    if (groups()[index] === SEARCH) return app.openSearch('tv');
+    if (groups()[index] === GUIDE) return app.navigate('guide');
     setGroupIndex(index);
     setChannelIndex(0);
   };
+  const isTab = (index: number) => [SEARCH, GUIDE].includes(groups()[index]);
 
   useRemote((key) => {
+    if (isDigit(key)) return typeDigit(key);
+
     if (fullscreen()) {
-      if (key === 'back' || key === 'ok') setFullscreen(false);
+      if (key === 'up' || key === 'down') zap(key === 'up' ? -1 : 1);
+      else if (key === 'back' || key === 'ok') setFullscreen(false);
       return;
     }
 
@@ -97,8 +169,9 @@ export function TvScreen() {
       case 'down': {
         const delta = key === 'up' ? -1 : 1;
         if (column() === 'groups') {
-          const next = clamp(groupIndex() + delta, 0, groups().length - 1);
-          if (next !== groupIndex()) selectGroup(next);
+          // Les onglets se sélectionnent sans s'ouvrir : il faut OK ou →.
+          setGroupIndex(clamp(groupIndex() + delta, 0, groups().length - 1));
+          if (!isTab(groupIndex())) setChannelIndex(0);
         } else {
           setChannelIndex(clamp(channelIndex() + delta, 0, channels().length - 1));
         }
@@ -107,20 +180,20 @@ export function TvScreen() {
       case 'left':
         return setColumn('groups');
       case 'right': {
-        if (column() === 'groups' && groups()[groupIndex()] === SEARCH) {
-          return app.openSearch('tv');
+        if (column() === 'groups') {
+          if (isTab(groupIndex())) return selectGroup(groupIndex());
+          return setColumn('channels');
         }
         // Déjà dans les chaînes : → ajoute ou retire la chaîne des favoris.
-        if (column() !== 'channels') return setColumn('channels');
         const channel = channels()[channelIndex()];
         if (channel) toggleFavorite(channel);
         return;
       }
       case 'ok': {
-        if (column() === 'groups' && groups()[groupIndex()] === SEARCH) {
-          return app.openSearch('tv');
+        if (column() === 'groups') {
+          if (isTab(groupIndex())) return selectGroup(groupIndex());
+          return setColumn('channels');
         }
-        if (column() === 'groups') return setColumn('channels');
         const channel = channels()[channelIndex()];
         if (channel) playChannel(channel);
         return;
@@ -138,12 +211,17 @@ export function TvScreen() {
         setPlayerMessage(message);
       },
     });
-    // Arrivée depuis la recherche : on lance la chaîne choisie.
+    // Arrivée depuis la recherche ou le guide : on lance la chaîne (ou le replay) choisie.
     const fromSearch = app.takePending('channel');
     if (fromSearch) {
       const index = channels().findIndex((c) => c.id === fromSearch.channel.id);
       if (index >= 0) setChannelIndex(index);
-      playChannel(fromSearch.channel);
+      tune(fromSearch.channel);
+    }
+    const replay = app.takePending('replay');
+    if (replay) {
+      tune(replay.channel, replay.url, replay.title);
+      setFullscreen(true);
     }
   });
 
@@ -160,8 +238,7 @@ export function TvScreen() {
           visibleRows={VISIBLE_ROWS}
           onSelect={(index) => {
             setColumn('groups');
-            if (groups()[index] === SEARCH) return app.openSearch('tv');
-            if (index !== groupIndex()) selectGroup(index);
+            if (index !== groupIndex() || isTab(index)) selectGroup(index);
           }}
         >
           {(group, index) => (
@@ -188,6 +265,7 @@ export function TvScreen() {
         >
           {(channel, index) => (
             <>
+              <span class="row__number">{numbers().get(channel.id) ?? ''}</span>
               <span class="row__logo">
                 <Show when={channel.logo}>
                   <img src={channel.logo} alt="" loading="lazy" />
@@ -227,9 +305,38 @@ export function TvScreen() {
               <p class="stage__overlay stage__overlay--error">{playerMessage()}</p>
             </Match>
           </Switch>
+          <Show when={typedNumber()}>
+            <p class="channel-number">{typedNumber()}</p>
+          </Show>
+          <Show when={fullscreen() && banner() && playing()}>
+            {(channel) => (
+              <div class="zap-banner">
+                <span class="zap-banner__number">{numbers().get(channel().id) ?? ''}</span>
+                <Show
+                  when={replayTitle()}
+                  fallback={<ChannelInfo channel={channel()} showFavoriteHint={false} />}
+                >
+                  <div class="channel-info">
+                    <p class="channel-info__name">{channel().name}</p>
+                    <p class="channel-info__line">↺ Replay · {replayTitle()}</p>
+                  </div>
+                </Show>
+              </div>
+            )}
+          </Show>
         </div>
         <Show when={!fullscreen()}>
-          <ChannelInfo channel={infoChannel()} showFavoriteHint={column() === 'channels'} />
+          <Show
+            when={replayTitle()}
+            fallback={
+              <ChannelInfo channel={infoChannel()} showFavoriteHint={column() === 'channels'} />
+            }
+          >
+            <div class="channel-info">
+              <p class="channel-info__name">{playing()?.name}</p>
+              <p class="channel-info__line">↺ Replay · {replayTitle()}</p>
+            </div>
+          </Show>
         </Show>
       </section>
     </div>

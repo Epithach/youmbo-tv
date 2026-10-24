@@ -57,6 +57,9 @@ export interface LiveStream {
   stream_icon: string;
   epg_channel_id: string;
   category_id: string;
+  /** Replay : les chaînes françaises gardent 3 jours de programmes. */
+  tv_archive: number;
+  tv_archive_duration: number;
 }
 
 export const liveStreams: LiveStream[] = [];
@@ -73,6 +76,8 @@ for (const [categoryId, { prefix, names }] of Object.entries(CHANNELS)) {
       stream_icon: `/mock-image/logo-${id}.svg`,
       epg_channel_id: `demo.${id}`,
       category_id: categoryId,
+      tv_archive: prefix === 'FR' ? 1 : 0,
+      tv_archive_duration: prefix === 'FR' ? 3 : 0,
     });
   }
 }
@@ -88,13 +93,17 @@ const SHOWS = [
   'Documentaire : Océans',
 ];
 
-/** Programme d'une chaîne : créneaux de 30 min autour de l'heure actuelle. */
-export function epgFor(streamId: number, now: number, count: number) {
+/**
+ * Programme d'une chaîne : `count` créneaux de 30 min, à partir de `fromSlot`
+ * créneaux avant l'heure actuelle (0 : le créneau en cours).
+ */
+export function epgFor(streamId: number, now: number, count: number, fromSlot = 0) {
   const slot = 1800;
-  const start = Math.floor(now / slot) * slot;
+  const start = (Math.floor(now / slot) - fromSlot) * slot;
+  const archive = liveStreams.find((s) => s.stream_id === streamId)?.tv_archive === 1;
   return Array.from({ length: count }, (_, i) => {
-    const title = pick(SHOWS, streamId + i);
     const begin = start + i * slot;
+    const title = pick(SHOWS, streamId + begin / slot);
     return {
       title: Buffer.from(title, 'utf8').toString('base64'),
       description: Buffer.from(`« ${title} », émission de démonstration.`, 'utf8').toString(
@@ -102,6 +111,7 @@ export function epgFor(streamId: number, now: number, count: number) {
       ),
       start_timestamp: String(begin),
       stop_timestamp: String(begin + slot),
+      has_archive: archive && begin + slot <= now ? 1 : 0,
     };
   });
 }

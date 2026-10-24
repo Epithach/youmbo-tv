@@ -2,6 +2,7 @@ import { Match, onMount, Switch } from 'solid-js';
 import { app } from './app-state';
 import { CountryScreen } from './screens/CountryScreen';
 import { FlixScreen } from './screens/FlixScreen';
+import { GuideScreen } from './screens/GuideScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { SearchScreen } from './screens/SearchScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
@@ -35,6 +36,9 @@ export function App() {
         </Match>
         <Match when={app.screen() === 'search'}>
           <SearchScreen />
+        </Match>
+        <Match when={app.screen() === 'guide'}>
+          <GuideScreen />
         </Match>
       </Switch>
     </div>

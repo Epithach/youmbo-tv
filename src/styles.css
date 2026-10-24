@@ -971,3 +971,226 @@ body {
 .list__row--selected .search__type {
   color: inherit;
 }
+
+/* --- Numéros de chaînes et zapping --- */
+
+.row__number {
+  flex: none;
+  width: 36px;
+  margin-right: 8px;
+  color: var(--text-muted);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.list__row--selected .row__number {
+  color: inherit;
+}
+
+.channel-number {
+  position: absolute;
+  top: 32px;
+  right: 40px;
+  margin: 0;
+  padding: 8px 20px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 56px;
+  font-variant-numeric: tabular-nums;
+}
+
+.zap-banner {
+  position: absolute;
+  left: 48px;
+  right: 48px;
+  bottom: 40px;
+  display: flex;
+  align-items: center;
+  border-radius: 12px;
+  background: rgba(13, 15, 20, 0.88);
+  overflow: hidden;
+}
+
+.zap-banner__number {
+  flex: none;
+  padding: 0 28px;
+  color: var(--accent);
+  font-size: 48px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.zap-banner .channel-info {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+}
+
+/* --- Guide TV --- */
+
+.guide {
+  --guide-channel-width: 260px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 40px 0;
+  overflow: hidden;
+}
+
+.guide__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.guide__clock {
+  color: var(--text-muted);
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+}
+
+.guide__grid {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}
+
+.guide__ruler,
+.guide__row {
+  display: flex;
+}
+
+.guide__corner,
+.guide__channel {
+  flex: none;
+  width: var(--guide-channel-width);
+}
+
+.guide__times,
+.guide__programmes {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}
+
+.guide__times {
+  height: 32px;
+}
+
+.guide__time {
+  position: absolute;
+  top: 0;
+  color: var(--text-muted);
+  font-size: 16px;
+}
+
+.guide__row {
+  height: 72px;
+  margin-bottom: 6px;
+}
+
+.guide__channel {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.guide__channel img {
+  width: 48px;
+  height: 36px;
+  margin-right: 12px;
+  object-fit: contain;
+}
+
+.guide__row--active .guide__channel {
+  background: var(--surface-active);
+}
+
+.guide__programme {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 12px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.guide__programme--live {
+  background: var(--surface-active);
+}
+
+.guide__programme--past {
+  opacity: 0.55;
+}
+
+.guide__programme--selected {
+  border-color: var(--accent);
+  opacity: 1;
+}
+
+.guide__programme-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.guide__programme-time,
+.guide__empty {
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+.guide__empty {
+  line-height: 72px;
+  padding-left: 12px;
+}
+
+.guide__now {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--error);
+  pointer-events: none;
+}
+
+.guide__details {
+  flex: none;
+  padding: 20px 0 28px;
+}
+
+.guide__details-title {
+  margin: 0 0 8px;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.guide__details-time {
+  margin-left: 16px;
+  color: var(--text-muted);
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.guide__details-description {
+  margin: 0 0 8px;
+  color: var(--text-muted);
+}
+
+.guide__details-status {
+  margin: 0;
+  color: var(--accent);
+}

@@ -7,13 +7,16 @@ import { loadPlaylistFrom } from './core/playlist-source';
 import { loadCountry, loadPlaylistUrl, saveCountry, savePlaylistUrl } from './core/storage';
 import { parseXtreamUrl } from './core/xtream';
 
-export type Screen = 'boot' | 'setup' | 'country' | 'home' | 'settings' | 'tv' | 'flix' | 'search';
+export type Screen =
+  'boot' | 'setup' | 'country' | 'home' | 'settings' | 'tv' | 'flix' | 'search' | 'guide';
 
 export type SearchScope = 'tv' | 'flix';
 
-/** Ce qu'un écran doit ouvrir en arrivant (résultat choisi dans la recherche). */
+/** Ce qu'un écran doit ouvrir en arrivant (résultat de recherche, émission du guide). */
 export type PendingOpen =
-  { kind: 'channel'; channel: Channel } | { kind: 'catalog'; item: CatalogItem };
+  | { kind: 'channel'; channel: Channel }
+  | { kind: 'catalog'; item: CatalogItem }
+  | { kind: 'replay'; channel: Channel; url: string; title: string };
 
 /**
  * État global de l'app : réglages (lien, pays), playlist chargée et écran courant.
@@ -124,7 +127,7 @@ function createAppState() {
   /** Ouvre un résultat de recherche : la TV pour une chaîne, YoumboFlix pour un titre. */
   function openResult(target: PendingOpen) {
     setPending(target);
-    setScreen(target.kind === 'channel' ? 'tv' : 'flix');
+    setScreen(target.kind === 'catalog' ? 'flix' : 'tv');
   }
 
   /** L'écran d'arrivée récupère (une seule fois) ce qu'il doit ouvrir. */

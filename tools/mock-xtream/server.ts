@@ -68,6 +68,11 @@ function api(params: URLSearchParams): unknown {
       const show = series.find((s) => s.series_id === Number(params.get('series_id')));
       return show ? seriesInfo(show) : { info: {}, episodes: {} };
     }
+    case 'get_simple_data_table': {
+      // Guide de la journée : 6 h passées (replay) et 6 h à venir.
+      const now = Math.floor(Date.now() / 1000);
+      return { epg_listings: epgFor(Number(params.get('stream_id')), now, 24, 12) };
+    }
     case 'get_short_epg': {
       const limit = Number(params.get('limit')) || 4;
       const now = Math.floor(Date.now() / 1000);
@@ -133,7 +138,7 @@ export function mockXtream(): Plugin {
 
         if (path === '/player_api.php') return sendJson(res, api(url.searchParams));
         if (path.startsWith('/mock-image/')) return image(res, path.slice('/mock-image/'.length));
-        if (path.startsWith('/live/')) {
+        if (path.startsWith('/live/') || path.startsWith('/timeshift/')) {
           live(req, res).catch(() => res.destroy());
           return;
         }
