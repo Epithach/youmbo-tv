@@ -49,3 +49,9 @@ export function loadJson<T>(key: string, fallback: T): T {
 }
 
 export const saveJson = (key: string, value: unknown) => write(key, JSON.stringify(value));
+
+const LAST_CHANNEL_KEY = 'youmbo.lastChannel';
+
+/** Dernière chaîne regardée (clé stable), relancée à l'ouverture de la TV. */
+export const loadLastChannel = () => read(LAST_CHANNEL_KEY);
+export const saveLastChannel = (key: string) => write(LAST_CHANNEL_KEY, key);

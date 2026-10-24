@@ -1,8 +1,18 @@
-import { createMemo, createSignal, Match, onCleanup, onMount, Show, Switch } from 'solid-js';
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  Match,
+  onCleanup,
+  onMount,
+  Show,
+  Switch,
+} from 'solid-js';
 import { app } from '../app-state';
 import { displayGroupName } from '../core/country';
 import { channelKey, library } from '../core/library';
 import type { Channel } from '../core/m3u';
+import { loadLastChannel, saveLastChannel } from '../core/storage';
 import { createPlayer, type Player, type PlayerState } from '../player';
 import { Marquee } from '../ui/Marquee';
 import { clamp, isDigit, useRemote } from '../ui/remote';
@@ -20,6 +30,11 @@ const NUMBER_DELAY_MS = 1500;
 const NUMBER_MAX_DIGITS = 4;
 /** Durée du bandeau au zapping. */
 const BANNER_MS = 3000;
+/**
+ * Pause avant de lancer la chaîne sélectionnée dans la liste : on ne lance pas un
+ * flux à chaque chaîne survolée (l'abonnement n'autorise souvent qu'une connexion).
+ */
+const PREVIEW_DELAY_MS = 700;
 
 type Column = 'groups' | 'channels';
 
@@ -105,6 +120,7 @@ export function TvScreen() {
     setPlaying(channel);
     setReplayTitle(replay);
     player?.play(url);
+    if (!replay) saveLastChannel(channelKey(channel));
     showBanner();
   };
 
@@ -223,6 +239,28 @@ export function TvScreen() {
       tune(replay.channel, replay.url, replay.title);
       setFullscreen(true);
     }
+    // Sinon : la dernière chaîne regardée (ou la première du pays), sans attendre OK.
+    if (!fromSearch && !replay) {
+      const list = channels();
+      const last = loadLastChannel();
+      const index = Math.max(
+        0,
+        list.findIndex((c) => channelKey(c) === last),
+      );
+      if (list[index]) {
+        setChannelIndex(index);
+        tune(list[index]);
+      }
+    }
+  });
+
+  // Le direct suit la sélection : la chaîne choisie se lance après une courte pause.
+  createEffect(() => {
+    if (column() !== 'channels') return;
+    const channel = channels()[channelIndex()];
+    if (!channel || channel.id === playing()?.id) return;
+    const timer = setTimeout(() => tune(channel), PREVIEW_DELAY_MS);
+    onCleanup(() => clearTimeout(timer));
   });
 
   // Quitter l'écran coupe le flux : l'abonnement n'autorise souvent qu'une connexion.
@@ -296,7 +334,7 @@ export function TvScreen() {
           <video ref={(el) => (video = el)} class="stage__video" />
           <Switch>
             <Match when={!playing()}>
-              <p class="stage__overlay">Choisis une chaîne et appuie sur OK</p>
+              <p class="stage__overlay">Aucune chaîne disponible</p>
             </Match>
             <Match when={playerState() === 'loading'}>
               <p class="stage__overlay">Chargement de {playing()?.name}…</p>

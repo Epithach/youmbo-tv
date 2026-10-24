@@ -83,12 +83,21 @@ function api(params: URLSearchParams): unknown {
   }
 }
 
-/** Affiche ou logo : un rectangle coloré avec un numéro, sans image externe. */
+/**
+ * Affiches et images de fond : photos libres (Picsum, licence Unsplash), une
+ * photo stable par titre. Logos de chaînes : un rectangle coloré avec un numéro.
+ */
 function image(res: ServerResponse, name: string) {
   const id = Number(name.match(/(\d+)/)?.[1] ?? 0);
-  const hue = (id * 47) % 360;
   const wide = name.startsWith('backdrop');
-  const [w, h] = wide ? [1280, 720] : name.startsWith('logo') ? [96, 72] : [342, 513];
+  if (wide || name.startsWith('poster')) {
+    const [width, height] = wide ? [1280, 720] : [342, 513];
+    res.writeHead(302, { Location: `https://picsum.photos/seed/youmbo-${id}/${width}/${height}` });
+    res.end();
+    return;
+  }
+  const hue = (id * 47) % 360;
+  const [w, h] = [96, 72];
   res.setHeader('Content-Type', 'image/svg+xml');
   res.setHeader('Cache-Control', 'max-age=86400');
   res.end(
@@ -138,6 +147,7 @@ export function mockXtream(): Plugin {
 
         if (path === '/player_api.php') return sendJson(res, api(url.searchParams));
         if (path.startsWith('/mock-image/')) return image(res, path.slice('/mock-image/'.length));
+        if (path.startsWith('/mock-photo/')) return image(res, path.slice('/mock-photo/'.length));
         if (path.startsWith('/live/') || path.startsWith('/timeshift/')) {
           live(req, res).catch(() => res.destroy());
           return;

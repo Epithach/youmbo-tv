@@ -1,36 +1,121 @@
+import { createEffect, createSignal, For } from 'solid-js';
 import { app } from '../app-state';
-import { Menu, pressMenuItem, type MenuItem } from '../ui/Menu';
-import { createSelection, useRemote } from '../ui/remote';
+import { randomHomeVideo } from '../core/home-media';
+import { pointerMoved, useRemote } from '../ui/remote';
 
-/** Accueil : Télévision ou YoumboFlix, et l'accès aux paramètres. */
+interface Side {
+  id: 'tv' | 'flix';
+  title: string;
+  subtitle: string;
+  disabled: boolean;
+  open: () => void;
+}
+
+/**
+ * Accueil scindé en deux, à la Tekken 8 : Télévision à gauche, YoumboFlix à
+ * droite. Le côté sélectionné s'élargit et sa vidéo de fond s'anime ; l'autre
+ * reste figé, assombri. ↑ atteint le bouton Paramètres.
+ */
 export function HomeScreen() {
-  const items: MenuItem[] = [
-    { label: 'Télévision', detail: 'Chaînes en direct', onPress: () => app.navigate('tv') },
+  const sides: Side[] = [
     {
-      label: 'YoumboFlix',
-      detail: app.xtream() ? 'Films et séries' : 'Nécessite un compte Xtream',
-      disabled: !app.xtream(),
-      onPress: () => app.navigate('flix'),
+      id: 'tv',
+      title: 'Télévision',
+      subtitle: 'Chaînes en direct',
+      disabled: false,
+      open: () => app.navigate('tv'),
     },
-    { label: 'Paramètres', detail: app.country()?.name, onPress: () => app.navigate('settings') },
+    {
+      id: 'flix',
+      title: 'YoumboFlix',
+      subtitle: app.xtream() ? 'Films et séries' : 'Nécessite un compte Xtream',
+      disabled: !app.xtream(),
+      open: () => app.navigate('flix'),
+    },
   ];
-  const selection = createSelection(() => items.length);
+  const [selected, setSelected] = createSignal(0);
+  const [onSettings, setOnSettings] = createSignal(false);
+  const videos: Record<Side['id'], HTMLVideoElement | undefined> = {
+    tv: undefined,
+    flix: undefined,
+  };
+
+  // Seule la vidéo du côté sélectionné joue : l'autre se fige (et la TV économise son décodeur).
+  createEffect(() => {
+    const active = onSettings() ? undefined : sides[selected()].id;
+    for (const side of sides) {
+      const video = videos[side.id];
+      if (!video) continue;
+      if (side.id === active) video.play().catch(() => undefined);
+      else video.pause();
+    }
+  });
+
+  const enter = (index: number) => {
+    const side = sides[index];
+    if (!side.disabled) side.open();
+  };
 
   useRemote((key) => {
-    if (key === 'left' || key === 'up') selection.move(-1);
-    else if (key === 'right' || key === 'down') selection.move(1);
-    else if (key === 'ok') pressMenuItem(items, selection.index());
+    if (onSettings()) {
+      if (key === 'ok') app.navigate('settings');
+      else if (key === 'down' || key === 'back') setOnSettings(false);
+      return;
+    }
+    if (key === 'left') setSelected(0);
+    else if (key === 'right') setSelected(1);
+    else if (key === 'up') setOnSettings(true);
+    else if (key === 'ok') enter(selected());
   });
 
   return (
-    <div class="screen screen--center">
-      <h1 class="screen__title screen__title--brand">Youmbo TV</h1>
-      <Menu
-        items={items}
-        selected={selection.index()}
-        onSelect={selection.setIndex}
-        direction="row"
-      />
+    <div class="home">
+      <For each={sides}>
+        {(side, index) => (
+          <section
+            class={`home-panel home-panel--${side.id}`}
+            classList={{
+              'home-panel--selected': !onSettings() && index() === selected(),
+              'home-panel--disabled': side.disabled,
+            }}
+            onMouseMove={(event) => {
+              if (!pointerMoved(event)) return;
+              setOnSettings(false);
+              setSelected(index());
+            }}
+            onClick={() => enter(index())}
+          >
+            <video
+              ref={(el) => (videos[side.id] = el)}
+              class="home-panel__video"
+              src={randomHomeVideo(side.id)}
+              muted
+              loop
+              playsinline
+              preload="auto"
+              // Une vraie image en pause (beaucoup de vidéos commencent par du noir).
+              onLoadedMetadata={(event) => {
+                const video = event.currentTarget;
+                video.currentTime = Math.min(5, video.duration / 3);
+              }}
+            />
+            <div class="home-panel__shade" />
+            <div class="home-panel__text">
+              <h2 class="home-panel__title">{side.title}</h2>
+              <p class="home-panel__subtitle">{side.subtitle}</p>
+            </div>
+          </section>
+        )}
+      </For>
+      <span class="home__brand">Youmbo TV</span>
+      <button
+        type="button"
+        class="home__settings"
+        classList={{ 'home__settings--selected': onSettings() }}
+        onClick={() => app.navigate('settings')}
+      >
+        ⚙ Paramètres · {app.country()?.name}
+      </button>
     </div>
   );
 }
