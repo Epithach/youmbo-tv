@@ -5,7 +5,7 @@ import { loadVolume } from '../../core/storage';
 import type { XtreamCredentials } from '../../core/xtream';
 
 /** Attente avant la bande-annonce : pas pour une fiche ouverte puis quittée aussitôt. */
-const START_DELAY_MS = 800;
+const START_DELAY_MS = 1000;
 /** Le lecteur YouTube montre ses boutons quelques instants en démarrant. */
 const TRAILER_FADE_DELAY_MS = 2000;
 /** La musique de fond reste un peu en retrait du volume choisi pour les vidéos. */

@@ -141,13 +141,14 @@ test('YoumboFlix : bannière, note, âge, bande-annonce et titres similaires', a
   await expect(page.locator('.detail__title')).toBeVisible();
 });
 
-test('YoumboFlix : bande-annonce en fond de la bannière après 3 s', async ({ page }) => {
+test('YoumboFlix : bande-annonce en fond de la bannière après une courte attente', async ({
+  page,
+}) => {
   await onboard(page);
   await press(page, 'ArrowRight', 'Enter');
   await expect(rowTitles(page).first()).toBeVisible();
 
-  // Rien tout de suite, puis la bande-annonce YouTube (avec le son) après l'attente.
-  await expect(page.locator('.hero__preview')).toHaveCount(0);
+  // La bande-annonce YouTube (avec le son) démarre après une courte attente.
   await expect(page.locator('.hero__preview')).toHaveAttribute(
     'src',
     /youtube-nocookie.*autoplay=1/,
