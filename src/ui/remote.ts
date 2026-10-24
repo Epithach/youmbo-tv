@@ -1,7 +1,8 @@
 import { createSignal, onCleanup, onMount } from 'solid-js';
 
 /** Touches communes au clavier du PC et à la télécommande Samsung. */
-export type RemoteKey = 'up' | 'down' | 'left' | 'right' | 'ok' | 'back';
+export type Digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
+export type RemoteKey = 'up' | 'down' | 'left' | 'right' | 'ok' | 'back' | Digit;
 
 const KEY_CODES: Record<number, RemoteKey> = {
   37: 'left',
@@ -16,8 +17,14 @@ const KEY_CODES: Record<number, RemoteKey> = {
 
 function toRemoteKey(event: KeyboardEvent): RemoteKey | undefined {
   // keyCode est obsolète mais c'est ce que les TV Tizen anciennes remontent de façon fiable.
-  return KEY_CODES[event.keyCode];
+  const code = event.keyCode;
+  // Chiffres : rangée du haut (48–57, aussi les touches de la télécommande) et pavé numérique.
+  if (code >= 48 && code <= 57) return String(code - 48) as Digit;
+  if (code >= 96 && code <= 105) return String(code - 96) as Digit;
+  return KEY_CODES[code];
 }
+
+export const isDigit = (key: RemoteKey): key is Digit => key.length === 1;
 
 /**
  * Écoute la télécommande (ou le clavier) tant que l'écran est affiché.

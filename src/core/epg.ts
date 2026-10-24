@@ -8,6 +8,8 @@ export interface Programme {
   /** Début et fin en millisecondes (horloge du navigateur). */
   start: number;
   end: number;
+  /** Disponible en replay (guide complet seulement). */
+  archived?: boolean;
 }
 
 /** Réponse de `get_short_epg` : les textes sont généralement encodés en base64. */
@@ -17,6 +19,7 @@ interface ShortEpgResponse {
     description?: string;
     start_timestamp?: string | number;
     stop_timestamp?: string | number;
+    has_archive?: number | string;
   }[];
 }
 
@@ -54,6 +57,7 @@ export function parseShortEpg(response: ShortEpgResponse): Programme[] {
       description: decodeEpgText(listing.description).trim() || undefined,
       start: Number(listing.start_timestamp) * 1000,
       end: Number(listing.stop_timestamp) * 1000,
+      archived: Number(listing.has_archive) === 1 || undefined,
     }))
     .filter((p) => p.title && p.end > p.start)
     .sort((a, b) => a.start - b.start);
@@ -84,6 +88,23 @@ export function loadShortEpg(
   // Un échec n'est pas gardé : on réessaiera à la prochaine sélection.
   programmes.catch(() => cache.delete(key));
   cache.set(key, { at: Date.now(), programmes });
+  return programmes;
+}
+
+/** Guide complet (passé compris, pour le replay) : gardé un quart d'heure par chaîne. */
+const DAY_CACHE_MS = 15 * 60 * 1000;
+const dayCache = new Map<string, { at: number; programmes: Promise<Programme[]> }>();
+
+export function loadEpgDay(credentials: XtreamCredentials, streamId: number): Promise<Programme[]> {
+  const key = `${credentials.server}|${streamId}`;
+  const hit = dayCache.get(key);
+  if (hit && Date.now() - hit.at < DAY_CACHE_MS) return hit.programmes;
+
+  const programmes = fetchJson<ShortEpgResponse>(
+    xtreamApiUrl(credentials, 'get_simple_data_table', { stream_id: streamId }),
+  ).then(parseShortEpg);
+  programmes.catch(() => dayCache.delete(key));
+  dayCache.set(key, { at: Date.now(), programmes });
   return programmes;
 }
 

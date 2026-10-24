@@ -24,6 +24,9 @@ export interface XtreamLiveStream {
   category_id: string | null;
   stream_icon?: string;
   epg_channel_id?: string | null;
+  /** Replay (« catch-up ») : 1 si la chaîne garde ses programmes, et pendant combien de jours. */
+  tv_archive?: number | string;
+  tv_archive_duration?: number | string;
 }
 
 /** Extrait les identifiants d'un lien Xtream (`get.php` ou `player_api.php`). */
@@ -80,6 +83,8 @@ export function buildXtreamPlaylist(
       logo: stream.stream_icon || undefined,
       tvgId: stream.epg_channel_id || undefined,
       streamId: stream.stream_id,
+      archiveDays:
+        Number(stream.tv_archive) === 1 ? Number(stream.tv_archive_duration) || 1 : undefined,
     }));
 
   const used = new Set(channels.map((channel) => channel.group));
@@ -90,4 +95,26 @@ export function buildXtreamPlaylist(
   const epgUrl = `${server}/xmltv.php?${new URLSearchParams({ username, password })}`;
 
   return { channels, groups, epgUrl };
+}
+
+/**
+ * Adresse du replay d'une émission passée (API « timeshift » de Xtream) :
+ * durée en minutes et début au format `AAAA-MM-JJ:HH-MM` (heure locale).
+ */
+export function catchupUrl(
+  credentials: XtreamCredentials,
+  streamId: number,
+  start: number,
+  end: number,
+): string {
+  const { server, username, password } = credentials;
+  const date = new Date(start);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const when =
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}:` +
+    `${pad(date.getHours())}-${pad(date.getMinutes())}`;
+  const minutes = Math.max(1, Math.round((end - start) / 60_000));
+  const user = encodeURIComponent(username);
+  const pass = encodeURIComponent(password);
+  return `${server}/timeshift/${user}/${pass}/${minutes}/${when}/${streamId}.ts`;
 }

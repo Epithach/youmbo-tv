@@ -52,6 +52,37 @@ test('télévision : chaînes du pays, programme en cours et favoris', async ({ 
   await expect(page.locator('.channel-info')).toContainText('Favori');
 });
 
+test('télévision : numéros de chaînes, zapping et bandeau', async ({ page }) => {
+  await onboard(page);
+  await press(page, 'Enter');
+  await expect(page.locator('.column--channels .row__number').first()).toHaveText('1');
+
+  // Taper « 4 » : la chaîne n°4 se lance.
+  await press(page, '4');
+  await expect(page.locator('.channel-number')).toHaveText('4');
+  await expect(page.locator('.column--channels .list__row--selected')).toContainText('Ciné Club');
+
+  // OK sur la chaîne qui joue : plein écran ; ↓ zappe et affiche le bandeau.
+  await press(page, 'Enter');
+  await expect(page.locator('.tv--fullscreen')).toBeVisible();
+  await press(page, 'ArrowDown');
+  await expect(page.locator('.zap-banner')).toContainText('FR - Jeunesse');
+  await expect(page.locator('.zap-banner__number')).toHaveText('5');
+});
+
+test('guide TV : grille, direct et replay', async ({ page }) => {
+  await onboard(page);
+  await press(page, 'Enter', 'ArrowLeft', 'ArrowUp', 'ArrowUp', 'ArrowDown', 'Enter');
+  await expect(page.getByRole('heading', { name: 'Guide TV' })).toBeVisible();
+  await expect(page.locator('.guide__details-status')).toContainText('En direct');
+
+  // ← : émission passée d'une chaîne avec replay.
+  await press(page, 'ArrowLeft');
+  await expect(page.locator('.guide__details-status')).toContainText('Replay disponible');
+  await press(page, 'Enter');
+  await expect(page.locator('.zap-banner')).toContainText('Replay');
+});
+
 test('YoumboFlix : rangées par genre et fiche film', async ({ page }) => {
   await onboard(page);
   await press(page, 'ArrowRight', 'Enter');
@@ -92,7 +123,8 @@ test('YoumboFlix : séries par genre, saisons et épisodes', async ({ page }) =>
 
 test('recherche dans la TV : chaînes seulement', async ({ page }) => {
   await onboard(page);
-  await press(page, 'Enter', 'ArrowLeft', 'ArrowUp', 'Enter');
+  // Catégories : Recherche, Guide TV, Toutes les chaînes… → deux fois ↑.
+  await press(page, 'Enter', 'ArrowLeft', 'ArrowUp', 'ArrowUp', 'Enter');
   await expect(page.getByRole('heading', { name: 'Rechercher une chaîne' })).toBeVisible();
 
   await page.locator('.search__input').fill('chaine une');
