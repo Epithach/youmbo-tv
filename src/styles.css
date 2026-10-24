@@ -1528,9 +1528,14 @@ body {
   min-width: 177.78vh;
   min-height: 100vh;
   border: 0;
-  opacity: 0.35;
+  opacity: 0;
   pointer-events: none;
   transform: translate(-50%, -50%);
+  transition: opacity 1s ease;
+}
+
+.detail__music-video--ready {
+  opacity: 0.35;
 }
 
 .detail__opening {

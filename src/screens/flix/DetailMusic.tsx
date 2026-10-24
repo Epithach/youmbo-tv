@@ -6,12 +6,20 @@ import type { XtreamCredentials } from '../../core/xtream';
 
 /** Attente avant la bande-annonce : pas pour une fiche ouverte puis quittée aussitôt. */
 const START_DELAY_MS = 800;
+/** Le lecteur YouTube montre ses boutons quelques instants en démarrant. */
+const TRAILER_FADE_DELAY_MS = 2000;
 /** La musique de fond reste un peu en retrait du volume choisi pour les vidéos. */
 const MUSIC_VOLUME = 0.6;
 
 interface OpeningOptions {
   season?: number;
   year?: number;
+}
+
+async function isAnime(credentials: XtreamCredentials, item: CatalogItem): Promise<boolean> {
+  const categories = await loadCategories(credentials, item.kind).catch(() => []);
+  const category = categories.find((c) => c.category_id === item.categoryId)?.category_name;
+  return looksLikeAnime(item.name, category);
 }
 
 /**
@@ -23,9 +31,7 @@ export async function animeOpenings(
   item: CatalogItem,
   options: OpeningOptions = {},
 ): Promise<Opening[]> {
-  const categories = await loadCategories(credentials, item.kind).catch(() => []);
-  const category = categories.find((c) => c.category_id === item.categoryId)?.category_name;
-  if (!looksLikeAnime(item.name, category)) return [];
+  if (!(await isAnime(credentials, item))) return [];
   return findOpenings(item.name, { kind: item.kind, ...options }).catch(() => []);
 }
 
@@ -48,15 +54,20 @@ const trailerUrl = (id: string) =>
   '&modestbranding=1&rel=0&playsinline=1&disablekb=1';
 
 /**
- * Fond animé et musical d'une fiche : la bande-annonce démarre tout de
- * suite ; pour un animé, l'opening de la saison (AnimeThemes) la remplace
- * en fondu dès que sa vidéo joue (ou sa piste audio si la vidéo échoue).
+ * Fond animé et musical d'une fiche : la bande-annonce pour un film ou une
+ * série ; pour un animé, l'opening de la saison (AnimeThemes) en fondu dès
+ * que sa vidéo joue (ou sa piste audio si la vidéo échoue), la bande-annonce
+ * ne servant que si aucun opening n'est trouvé.
  */
 export function DetailMusic(props: DetailMusicProps) {
+  const [anime] = createResource(
+    () => props.item,
+    (item) => isAnime(props.credentials, item),
+  );
   const [opening] = createResource(
-    () => ({ item: props.item, season: props.season, year: props.year }),
+    () => anime() && { item: props.item, season: props.season, year: props.year },
     async ({ item, season, year }) =>
-      pickOpening(await animeOpenings(props.credentials, item, { season, year }), Math.random()),
+      pickOpening(await findOpenings(item.name, { kind: item.kind, season, year }), Math.random()),
   );
 
   // Changer de titre ou de saison relance le délai et le fondu.
@@ -77,8 +88,14 @@ export function DetailMusic(props: DetailMusicProps) {
   const video = () => (active() && !videoFailed() ? opening()?.video : undefined);
   const audio = () =>
     active() && (videoFailed() || !opening()?.video) ? opening()?.audio : undefined;
-  const trailer = () =>
-    active() && started() && !videoPlaying() && !audio() ? props.trailerId : undefined;
+  // Animé : on attend l'opening ; la bande-annonce seulement s'il n'y en a pas.
+  const noOpening = () => anime() === false || (anime() === true && !opening.loading && !opening());
+  const trailer = () => (active() && started() && noOpening() ? props.trailerId : undefined);
+  // Le lecteur YouTube affiche ses boutons en démarrant : on attend avant le fondu.
+  const [trailerReady, setTrailerReady] = createSignal(false);
+  createEffect(() => {
+    if (!trailer()) setTrailerReady(false);
+  });
   const setVolume = (el: HTMLMediaElement) => (el.volume = loadVolume() * MUSIC_VOLUME);
 
   return (
@@ -87,7 +104,9 @@ export function DetailMusic(props: DetailMusicProps) {
         {(id) => (
           <iframe
             class="detail__music-video"
+            classList={{ 'detail__music-video--ready': trailerReady() }}
             src={trailerUrl(id())}
+            onLoad={() => setTimeout(() => setTrailerReady(true), TRAILER_FADE_DELAY_MS)}
             title="Bande-annonce (musique de fond)"
             allow="autoplay; encrypted-media"
             tabIndex={-1}
