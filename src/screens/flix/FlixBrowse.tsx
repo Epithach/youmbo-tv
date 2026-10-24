@@ -15,6 +15,7 @@ import { displayTitle, resizePoster } from '../../core/catalog-display';
 import type { XtreamCredentials } from '../../core/xtream';
 import { Marquee } from '../../ui/Marquee';
 import { clamp, useRemote } from '../../ui/remote';
+import { Hero, HERO_BUTTONS } from './Hero';
 
 /** Rangées rendues autour de la sélection (au-dessus / en dessous). */
 const ROWS_BEFORE = 1;
@@ -34,10 +35,14 @@ const TABS: { kind: CatalogKind; label: string }[] = [
 /** Dernier « onglet » : ouvre la recherche de films et séries (ce n'est pas un catalogue). */
 const SEARCH_TAB = TABS.length;
 
+/** Rangées « virtuelles » au-dessus des affiches : barre d'onglets puis bannière. */
+const TABS_ROW = -2;
+const HERO_ROW = -1;
+
 /** Position dans l'accueil YoumboFlix, conservée quand on ouvre une fiche. */
 export interface BrowsePosition {
   tab: CatalogKind;
-  /** Rangée sélectionnée par onglet ; -1 : barre d'onglets. */
+  /** Rangée sélectionnée par onglet ; -1 : bannière, -2 : barre d'onglets. */
   rows: Record<CatalogKind, number>;
   /** Affiche sélectionnée par rangée (`kind|clé de la rangée`). */
   columns: Record<string, number>;
@@ -54,6 +59,8 @@ interface FlixBrowseProps {
   position: BrowsePosition;
   onPositionChange: (position: BrowsePosition) => void;
   onOpen: (item: CatalogItem) => void;
+  /** Bannière : « Lecture » (film lancé directement, série ouverte). */
+  onPlay: (item: CatalogItem) => void;
 }
 
 type RowState = CatalogItem[] | 'loading' | 'error';
@@ -122,12 +129,37 @@ export function FlixBrowse(props: FlixBrowseProps) {
   const setRow = (value: number) => update({ rows: { ...props.position.rows, [kind()]: value } });
 
   const [onSearchTab, setOnSearchTab] = createSignal(false);
+  const [heroButton, setHeroButton] = createSignal(0);
+
+  /**
+   * Titre de la bannière : l'affiche sélectionnée quand on parcourt les rangées,
+   * sinon la première nouveauté (première rangée du fournisseur).
+   */
+  const featured = () => {
+    const first = providerRows()[0];
+    return first ? itemsOf(first)[0] : undefined;
+  };
+  const heroItem = () => {
+    const current = catalogRows()[row()];
+    return (current && itemsOf(current)[column(current)]) || featured();
+  };
+  const pressHero = (button: number) => {
+    const item = heroItem();
+    if (!item) return;
+    if (button === 0) props.onPlay(item);
+    else props.onOpen(item);
+  };
+  // La première nouveauté doit être chargée même si sa rangée n'est pas visible.
+  createEffect(() => {
+    const first = providerRows()[0];
+    if (first) ensureLoaded(first);
+  });
 
   // Actions communes à la télécommande et à la souris.
   const selectTab = (tab: CatalogKind, row = props.position.rows[tab]) =>
     update({ tab, rows: { ...props.position.rows, [tab]: row } });
   const moveRow = (delta: number) =>
-    setRow(clamp(row() + delta, row() === -1 && delta < 0 ? -1 : 0, catalogRows().length - 1));
+    setRow(clamp(row() + delta, TABS_ROW, catalogRows().length - 1));
   const setColumn = (catalogRow: CatalogRow, value: number) => {
     const next = clamp(value, 0, itemsOf(catalogRow).length - 1);
     update({ columns: { ...props.position.columns, [rowKey(catalogRow)]: next } });
@@ -141,20 +173,31 @@ export function FlixBrowse(props: FlixBrowseProps) {
     const current = catalogRows()[row()];
 
     // Barre d'onglets : ← → changent d'onglet, ↓ redescend dans les rangées.
-    if (row() === -1) {
+    if (row() === TABS_ROW) {
       const tab = onSearchTab() ? SEARCH_TAB : TABS.findIndex((t) => t.kind === kind());
       if (key === 'left' || key === 'right') {
         const next = clamp(tab + (key === 'left' ? -1 : 1), 0, SEARCH_TAB);
         setOnSearchTab(next === SEARCH_TAB);
-        if (next !== SEARCH_TAB) selectTab(TABS[next].kind, -1);
+        if (next !== SEARCH_TAB) selectTab(TABS[next].kind, TABS_ROW);
         return;
       }
       if (onSearchTab() && key === 'ok') return app.openSearch('flix');
       if (key === 'down' || key === 'ok') {
         setOnSearchTab(false);
-        return setRow(0);
+        return setRow(HERO_ROW);
       }
       if (key === 'back') return app.navigate('home');
+      return;
+    }
+
+    // Bannière : ← → entre « Lecture » et « Plus d'infos ».
+    if (row() === HERO_ROW) {
+      if (key === 'left' || key === 'right') {
+        setHeroButton(clamp(heroButton() + (key === 'left' ? -1 : 1), 0, HERO_BUTTONS.length - 1));
+      } else if (key === 'ok') pressHero(heroButton());
+      else if (key === 'up') setRow(TABS_ROW);
+      else if (key === 'down') setRow(0);
+      else if (key === 'back') app.navigate('home');
       return;
     }
 
@@ -190,7 +233,7 @@ export function FlixBrowse(props: FlixBrowseProps) {
     <div class="flix">
       <header class="flix__header">
         <span class="flix__brand">YoumboFlix</span>
-        <nav class="flix__tabs" classList={{ 'flix__tabs--active': row() === -1 }}>
+        <nav class="flix__tabs" classList={{ 'flix__tabs--active': row() === TABS_ROW }}>
           <For each={TABS}>
             {(tab) => (
               <span
@@ -217,6 +260,13 @@ export function FlixBrowse(props: FlixBrowseProps) {
           when={catalogRows().length > 0}
           fallback={<p class="flix__message">Rien de disponible pour ce pays.</p>}
         >
+          <Hero
+            credentials={props.credentials}
+            item={heroItem()}
+            focused={row() === HERO_ROW}
+            button={heroButton()}
+            onPress={pressHero}
+          />
           <div class="flix__rows" onWheel={onWheel}>
             <For each={visibleRows()}>
               {({ catalogRow, index }) => (

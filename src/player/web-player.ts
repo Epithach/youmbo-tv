@@ -258,6 +258,7 @@ export class WebPlayer implements Player {
         type: 'audio' as const,
         label: describeTrack(track),
         selected: track === defaultAudio,
+        language: track.language,
       })),
       ...tracks
         .filter((track) => track.kind === 'subtitle')
@@ -267,6 +268,8 @@ export class WebPlayer implements Player {
           label: describeTrack(track),
           // Le navigateur n'affiche pas les sous-titres intégrés au MKV.
           selected: false,
+          language: track.language,
+          forced: track.isForced || /forc/i.test(track.name ?? ''),
         })),
     ];
     return { options, switchable: Boolean(browserAudio && browserAudio.length > 1) };

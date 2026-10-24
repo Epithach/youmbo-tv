@@ -103,13 +103,43 @@ test('YoumboFlix : rangées par genre et fiche film', async ({ page }) => {
   await expect(rowTitles(page).first()).toHaveText('Ma liste');
 });
 
+test('YoumboFlix : bannière, note, âge, bande-annonce et titres similaires', async ({ page }) => {
+  await onboard(page);
+  await press(page, 'ArrowRight', 'Enter');
+  await expect(rowTitles(page).first()).toBeVisible();
+
+  // ↑ : la bannière met en avant la première nouveauté, avec Lecture et Plus d'infos.
+  await press(page, 'ArrowUp');
+  await expect(page.locator('.hero--focused')).toBeVisible();
+  await expect(page.locator('.hero__title')).toHaveText('L’Ombre du Nord (2000)');
+  await expect(page.locator('.hero .controls__button')).toHaveText(['▶ Lecture', 'Plus d’infos']);
+
+  // Plus d'infos : fiche avec note, âge, bande-annonce et similaires.
+  await press(page, 'ArrowRight', 'Enter');
+  await expect(page.locator('.detail__title')).toHaveText('L’Ombre du Nord (2000)');
+  await expect(page.locator('.detail .badge--rating')).toBeVisible();
+  await expect(page.locator('.detail .menu__label')).toContainText(['▶ Bande-annonce']);
+  await expect(page.locator('.detail .flix-row__title')).toHaveText('Titres similaires');
+
+  // ↓ → OK : un titre similaire s'ouvre.
+  await press(page, 'ArrowDown', 'ArrowRight', 'Enter');
+  await expect(page.locator('.detail__title')).not.toHaveText('L’Ombre du Nord (2000)');
+
+  // Bande-annonce : ouverte puis fermée par Retour.
+  await press(page, 'ArrowUp', 'ArrowRight', 'ArrowRight', 'Enter');
+  await expect(page.locator('.trailer iframe')).toHaveAttribute('src', /youtube/);
+  await press(page, 'Escape');
+  await expect(page.locator('.trailer')).toHaveCount(0);
+  await expect(page.locator('.detail__title')).toBeVisible();
+});
+
 test('YoumboFlix : séries par genre, saisons et épisodes', async ({ page }) => {
   await onboard(page);
   await press(page, 'ArrowRight', 'Enter');
   await expect(rowTitles(page).first()).toBeVisible();
 
-  // ↑ vers les onglets, → Séries, ↓ dans les rangées.
-  await press(page, 'ArrowUp', 'ArrowRight', 'ArrowDown');
+  // ↑ ↑ vers les onglets (au-dessus de la bannière), → Séries, ↓ ↓ dans les rangées.
+  await press(page, 'ArrowUp', 'ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowDown');
   await expect(page.locator('.flix__tab--selected')).toHaveText('Séries');
   await expect(page.locator('.flix__rows')).toContainText('Séries 2026');
 
@@ -143,7 +173,7 @@ test('recherche dans YoumboFlix : films et séries seulement', async ({ page }) 
   await onboard(page);
   await press(page, 'ArrowRight', 'Enter');
   await expect(rowTitles(page).first()).toBeVisible();
-  await press(page, 'ArrowUp', 'ArrowRight', 'ArrowRight', 'Enter');
+  await press(page, 'ArrowUp', 'ArrowUp', 'ArrowRight', 'ArrowRight', 'Enter');
   await expect(
     page.getByRole('heading', { name: 'Rechercher un film ou une série' }),
   ).toBeVisible();
@@ -156,6 +186,25 @@ test('recherche dans YoumboFlix : films et séries seulement', async ({ page }) 
   // Retour : on revient dans YoumboFlix.
   await press(page, 'Escape');
   await expect(page.locator('.flix__brand')).toBeVisible();
+});
+
+test('paramètres : langue audio et sous-titres préférés', async ({ page }) => {
+  await onboard(page);
+  await press(page, 'ArrowRight', 'ArrowRight', 'Enter');
+  const details = page.locator('.menu__detail');
+  await expect(details.nth(2)).toContainText('Français');
+  await expect(details.nth(3)).toContainText('Forcés seulement');
+
+  await press(page, 'ArrowDown', 'ArrowDown', 'Enter');
+  await expect(details.nth(2)).toContainText('Anglais');
+  await press(page, 'ArrowDown', 'Enter');
+  await expect(details.nth(3)).toContainText('Toujours');
+
+  // Retenu au rechargement (l'app rouvre l'accueil).
+  await page.reload();
+  await expect(page.locator('.menu__item')).toHaveCount(3);
+  await press(page, 'ArrowRight', 'ArrowRight', 'Enter');
+  await expect(details.nth(2)).toContainText('Anglais');
 });
 
 test('paramètres : changer de pays', async ({ page }) => {
