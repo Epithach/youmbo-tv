@@ -1,5 +1,7 @@
 import { createSignal, onCleanup, onMount, Show } from 'solid-js';
+import { app } from '../../app-state';
 import { library, type WatchProgress } from '../../core/library';
+import { loadPreferences, pickTracks } from '../../core/preferences';
 import { loadVolume, saveVolume } from '../../core/storage';
 import {
   createPlayer,
@@ -22,6 +24,9 @@ interface VodPlayerProps {
   /** Reprendre à cette position (secondes). */
   startAt?: number;
 }
+
+/** Le bouton « Épisode suivant » apparaît dans ces dernières secondes. */
+const NEXT_EPISODE_SECONDS = 30;
 
 /** Fréquence d'enregistrement de la position de lecture. */
 const SAVE_EVERY_MS = 10_000;
@@ -92,6 +97,25 @@ export function VodPlayer(props: VodPlayerProps) {
 
   const refreshTracks = () => player?.tracks().then(setTracks, () => undefined);
 
+  /** Langue audio et sous-titres préférés (Paramètres), si le lecteur sait changer de piste. */
+  const applyPreferredTracks = async () => {
+    const list = await player?.tracks().catch(() => undefined);
+    if (!list) return;
+    setTracks(list);
+    if (!list.switchable) return;
+    const pick = pickTracks(list.options, loadPreferences(app.country()?.code ?? ''));
+    if (pick.audio) player?.selectTrack('audio', pick.audio);
+    player?.selectTrack('subtitle', pick.subtitle);
+    void refreshTracks();
+  };
+
+  /** « Épisode suivant » : proposé dans les dernières secondes s'il y a une suite. */
+  const remaining = () => duration() - position();
+  const nextVisible = () =>
+    Boolean(props.onEnded) &&
+    duration() > NEXT_EPISODE_SECONDS + 10 &&
+    remaining() <= NEXT_EPISODE_SECONDS;
+
   onMount(() => {
     player = createPlayer(video!, {
       onStateChange: (next, text) => {
@@ -101,7 +125,7 @@ export function VodPlayer(props: VodPlayerProps) {
     });
     player.setVolume(volume());
     player.play(props.url);
-    void refreshTracks();
+    void applyPreferredTracks();
     showControls();
     video!.addEventListener('ended', () => {
       saveProgress();
@@ -223,6 +247,11 @@ export function VodPlayer(props: VodPlayerProps) {
   };
 
   useRemote((key) => {
+    // Fin d'épisode : OK enchaîne tout de suite sur le suivant.
+    if (nextVisible() && !menu() && key === 'ok' && !controls()) {
+      saveProgress();
+      return props.onEnded?.();
+    }
     // Menu des pistes ouvert.
     const current = menu();
     if (current) {
@@ -291,6 +320,19 @@ export function VodPlayer(props: VodPlayerProps) {
       </Show>
       <Show when={formatWarning()}>
         <p class="vod-player__warning">{formatWarning()} Il sera lu normalement sur la TV.</p>
+      </Show>
+
+      <Show when={nextVisible()}>
+        <button
+          type="button"
+          class="next-episode"
+          onClick={() => {
+            saveProgress();
+            props.onEnded?.();
+          }}
+        >
+          Épisode suivant ▶<small>dans {Math.max(0, Math.ceil(remaining()))} s · OK</small>
+        </button>
       </Show>
 
       <Show when={menu()}>

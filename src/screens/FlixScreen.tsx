@@ -125,6 +125,11 @@ export function FlixScreen() {
               position={browse()}
               onPositionChange={setBrowse}
               onOpen={open}
+              onPlay={(item) =>
+                item.kind === 'movies'
+                  ? playMovie(credentials(), item, undefined, false)
+                  : open(item)
+              }
             />
           </Match>
           <Match when={asView('movie')} keyed>
@@ -135,6 +140,7 @@ export function FlixScreen() {
                 onPlay={(item, details, fromStart) =>
                   playMovie(credentials(), item, details, fromStart)
                 }
+                onOpen={open}
                 onBack={() => setView({ kind: 'browse' })}
               />
             )}
@@ -149,6 +155,7 @@ export function FlixScreen() {
                 onPlay={(episodes, index, title) =>
                   playEpisode(credentials(), current.item, episodes, index, title)
                 }
+                onOpen={open}
                 onBack={() => setView({ kind: 'browse' })}
               />
             )}

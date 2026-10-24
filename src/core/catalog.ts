@@ -38,6 +38,11 @@ export interface VodInfo {
   movie_image?: string;
   cover_big?: string;
   backdrop_path?: string[] | string;
+  /** Âge conseillé (« 12 », « 16+ »…) et classification américaine (« PG-13 »). */
+  age?: string;
+  mpaa_rating?: string;
+  /** Identifiant YouTube de la bande-annonce. */
+  youtube_trailer?: string;
 }
 
 export interface VodDetails {
@@ -76,6 +81,9 @@ export interface SeriesItem {
   /** Ex. « Animation, Action & Adventure ». */
   genre?: string;
   last_modified?: string;
+  plot?: string;
+  backdrop_path?: string[] | string;
+  releaseDate?: string;
 }
 
 export interface SeriesEpisode {
@@ -134,6 +142,11 @@ export interface CatalogItem {
   added: number;
   /** « Continuer à regarder » : avancement (0 à 1), affiché sous l'affiche. */
   progress?: number;
+  /** Séries : de quoi remplir la bannière sans requête supplémentaire. */
+  plot?: string;
+  backdrop?: string;
+  genreText?: string;
+  year?: string;
 }
 
 const ACTIONS: Record<CatalogKind, { categories: string; items: string }> = {
@@ -166,7 +179,17 @@ function toCatalogItem(kind: CatalogKind, raw: VodItem | SeriesItem): CatalogIte
     categoryId: String(series.category_id),
     genres: genresIn(series.genre),
     added: Number(series.last_modified) || 0,
+    // La liste des séries donne déjà de quoi remplir la bannière, sans requête de plus.
+    plot: series.plot || undefined,
+    backdrop: firstImage(series.backdrop_path),
+    genreText: series.genre || undefined,
+    year: series.releaseDate?.slice(0, 4),
   };
+}
+
+/** Première image d'un champ qui est parfois une liste, parfois une chaîne. */
+export function firstImage(value: string[] | string | undefined): string | undefined {
+  return (Array.isArray(value) ? value[0] : value) || undefined;
 }
 
 const categoriesCache = new Map<string, Promise<VodCategory[]>>();
@@ -205,8 +228,13 @@ export function loadCategory(
   });
 }
 
+const detailsCache = new Map<string, Promise<VodDetails>>();
+
+/** Fiche d'un film : demandée par la fiche et par la bannière, gardée pour la session. */
 export function loadVodDetails(credentials: XtreamCredentials, streamId: number) {
-  return fetchJson<VodDetails>(xtreamApiUrl(credentials, 'get_vod_info', { vod_id: streamId }));
+  return cached(detailsCache, `${credentials.server}|${streamId}`, () =>
+    fetchJson<VodDetails>(xtreamApiUrl(credentials, 'get_vod_info', { vod_id: streamId })),
+  );
 }
 
 export function loadSeriesDetails(credentials: XtreamCredentials, seriesId: number) {

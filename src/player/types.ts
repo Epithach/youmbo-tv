@@ -8,6 +8,10 @@ export interface TrackOption {
   type: TrackType;
   label: string;
   selected: boolean;
+  /** Code langue (ISO 639 ou BCP 47), pour le choix automatique. */
+  language?: string;
+  /** Sous-titres « forcés » (seulement les passages en langue étrangère). */
+  forced?: boolean;
 }
 
 export interface TrackList {

@@ -116,6 +116,19 @@ export function epgFor(streamId: number, now: number, count: number, fromSlot = 
   });
 }
 
+/** Genres affichés sur les fiches, selon la catégorie du film. */
+const MOVIE_GENRES: Record<string, string> = {
+  '102': 'Action, Aventure',
+  '103': 'Comédie',
+  '104': 'Animation, Familial',
+  '105': 'Horreur, Thriller',
+  '107': 'Action, Thriller',
+};
+
+/** Bande-annonce YouTube libre de droits (Big Buck Bunny, Blender Foundation). */
+const SAMPLE_TRAILER = 'aqz-KE-bpKQ';
+const AGES = ['', '10', '12', '16'];
+
 /* --- Films --- */
 
 export const vodCategories = [
@@ -199,6 +212,7 @@ export interface Series {
   last_modified: string;
   rating: string;
   category_id: string;
+  backdrop_path: string[];
 }
 
 export const series: Series[] = seriesCategories.flatMap((c, ci) =>
@@ -217,6 +231,7 @@ export const series: Series[] = seriesCategories.flatMap((c, ci) =>
       last_modified: added(n),
       rating: String(6 + (n % 4)),
       category_id: c.category_id,
+      backdrop_path: [`/mock-image/backdrop-${id}.svg`],
     };
   }),
 );
@@ -234,7 +249,7 @@ export function seriesInfo(show: Series) {
       info: { duration: '00:00:52', plot: `Épisode ${e + 1} de la saison ${s}.` },
     }));
   }
-  return { info: show, episodes };
+  return { info: { ...show, youtube_trailer: SAMPLE_TRAILER }, episodes };
 }
 
 export function movieInfo(movie: VodStream) {
@@ -242,7 +257,7 @@ export function movieInfo(movie: VodStream) {
     info: {
       name: movie.name.replace(/^\w+ - /, ''),
       plot: 'Film de démonstration du faux serveur Xtream, pour tester l’interface sans fournisseur.',
-      genre: vodCategories.find((c) => c.category_id === movie.category_id)?.category_name,
+      genre: MOVIE_GENRES[movie.category_id] ?? 'Drame',
       director: 'Équipe Youmbo',
       cast: 'Acteur Un, Actrice Deux',
       releasedate: `${movie.name.match(/\((\d{4})\)/)?.[1] ?? '2020'}-01-01`,
@@ -250,6 +265,8 @@ export function movieInfo(movie: VodStream) {
       rating: movie.rating,
       movie_image: movie.stream_icon,
       backdrop_path: [`/mock-image/backdrop-${movie.stream_id}.svg`],
+      age: pick(AGES, movie.stream_id),
+      youtube_trailer: SAMPLE_TRAILER,
     },
     movie_data: {
       stream_id: movie.stream_id,
