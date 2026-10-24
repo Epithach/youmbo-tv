@@ -10,8 +10,8 @@ import { Badges } from './FlixParts';
 const DETAILS_DELAY_MS = 500;
 /** Attente sur un titre avant de lancer (muette et invisible) sa bande-annonce en fond. */
 const PREVIEW_DELAY_MS = 1000;
-/** La bande-annonce apparaît, avec le son en fondu, 7 s après la sélection du titre. */
-const PREVIEW_REVEAL_MS = 7000 - PREVIEW_DELAY_MS;
+/** La bande-annonce apparaît, avec le son en fondu, 6 s après la sélection du titre. */
+const PREVIEW_REVEAL_MS = 6000 - PREVIEW_DELAY_MS;
 
 export const HERO_BUTTONS = ['▶ Lecture', 'Plus d’infos'] as const;
 
@@ -47,7 +47,7 @@ export function Hero(props: HeroProps) {
   /** Fiche du film affiché (pas celle d'un film vu juste avant). */
   const movie = () => (info()?.id === props.item?.id ? info()?.info : undefined);
 
-  // Bande-annonce lancée après 1 s sur le même titre, visible à 7 s ; elle s'arrête dès qu'on bouge.
+  // Bande-annonce lancée après 1 s sur le même titre, visible à 6 s ; elle s'arrête dès qu'on bouge.
   const trailerId = () => movie()?.youtube_trailer || props.item?.trailer;
   const [preview, setPreview] = createSignal<string>();
   createEffect(() => {
