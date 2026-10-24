@@ -1,4 +1,5 @@
 import { For, Show } from 'solid-js';
+import { pointerMoved } from './remote';
 
 export interface MenuItem {
   label: string;
@@ -28,7 +29,11 @@ export function Menu(props: MenuProps) {
               'menu__item--selected': index() === props.selected,
               'menu__item--disabled': item.disabled,
             }}
-            onMouseEnter={() => props.onSelect(index())}
+            // mousemove plutôt que mouseenter : un bouton qui apparaît sous une souris
+            // immobile ne doit pas voler la sélection de la télécommande.
+            onMouseMove={(event) =>
+              pointerMoved(event) && index() !== props.selected && props.onSelect(index())
+            }
             onClick={() => !item.disabled && item.onPress()}
           >
             <span class="menu__label">{item.label}</span>
