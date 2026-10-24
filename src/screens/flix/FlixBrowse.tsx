@@ -4,6 +4,7 @@ import {
   createResource,
   createSignal,
   For,
+  onCleanup,
   Show,
   untrack,
 } from 'solid-js';
@@ -15,6 +16,7 @@ import { displayTitle, resizePoster } from '../../core/catalog-display';
 import type { XtreamCredentials } from '../../core/xtream';
 import { Marquee } from '../../ui/Marquee';
 import { clamp, useRemote } from '../../ui/remote';
+import { animeOpenings } from './DetailMusic';
 import { Hero, HERO_BUTTONS } from './Hero';
 
 /** Rangées rendues autour de la sélection (au-dessus / en dessous). */
@@ -27,6 +29,8 @@ const POSTERS_AFTER = 8;
 const ARROW_STEP = 5;
 /** Délai minimal entre deux crans de molette pris en compte. */
 const WHEEL_DELAY_MS = 180;
+/** Attente sur un titre avant de chercher son opening (animés). */
+const PREFETCH_DELAY_MS = 600;
 
 const TABS: { kind: CatalogKind; label: string }[] = [
   { kind: 'movies', label: 'Films' },
@@ -161,6 +165,13 @@ export function FlixBrowse(props: FlixBrowseProps) {
     if (button === 0) props.onPlay(item);
     else props.onOpen(item);
   };
+  // Opening d'un animé cherché dès qu'il reste sélectionné : AnimeThemes est lent.
+  createEffect(() => {
+    const item = heroItem();
+    if (!item) return;
+    const timer = setTimeout(() => void animeOpenings(props.credentials, item), PREFETCH_DELAY_MS);
+    onCleanup(() => clearTimeout(timer));
+  });
   // La première nouveauté doit être chargée même si sa rangée n'est pas visible.
   createEffect(() => {
     const first = providerRows()[0];
