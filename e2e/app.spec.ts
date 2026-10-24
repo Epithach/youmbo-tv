@@ -18,7 +18,7 @@ async function onboard(page: Page) {
   await expect(page.getByRole('heading', { name: 'Choisis ton pays' })).toBeVisible();
   await expect(page.locator('.list__row--selected')).toContainText('France');
   await press(page, 'Enter');
-  await expect(page.locator('.menu__item')).toHaveCount(3);
+  await expect(page.locator('.home-panel')).toHaveCount(2);
 }
 
 const rowTitles = (page: Page) => page.locator('.flix-row__title');
@@ -28,10 +28,11 @@ const activePosters = (page: Page) =>
 
 test('premier lancement : lien, pays puis accueil', async ({ page }) => {
   await onboard(page);
-  await expect(page.locator('.menu__label')).toHaveText(['Télévision', 'YoumboFlix', 'Paramètres']);
+  await expect(page.locator('.home-panel__title')).toHaveText(['Télévision', 'YoumboFlix']);
+  await expect(page.locator('.home__settings')).toContainText('Paramètres');
   // Au lancement suivant, l'app ouvre directement l'accueil.
   await page.reload();
-  await expect(page.locator('.menu__item')).toHaveCount(3);
+  await expect(page.locator('.home-panel')).toHaveCount(2);
 });
 
 test('télévision : chaînes du pays, programme en cours et favoris', async ({ page }) => {
@@ -40,6 +41,12 @@ test('télévision : chaînes du pays, programme en cours et favoris', async ({ 
 
   const channels = page.locator('.column--channels .row__label');
   await expect(channels.first()).toHaveText('FR - Chaîne Une');
+  // Le direct se lance sans appuyer sur OK, puis suit la sélection.
+  const rows = page.locator('.column--channels .list__row');
+  await expect(rows.first().locator('.row__badge')).toBeVisible();
+  await press(page, 'ArrowDown');
+  await expect(rows.nth(1).locator('.row__badge')).toBeVisible();
+  await press(page, 'ArrowUp');
   // Le faux titre de section « ##### FRANCE ##### » est filtré.
   await expect(page.locator('.column--channels')).not.toContainText('#####');
   // Pas de chaînes d'autres pays.
@@ -190,7 +197,7 @@ test('recherche dans YoumboFlix : films et séries seulement', async ({ page }) 
 
 test('paramètres : langue audio et sous-titres préférés', async ({ page }) => {
   await onboard(page);
-  await press(page, 'ArrowRight', 'ArrowRight', 'Enter');
+  await press(page, 'ArrowUp', 'Enter');
   const details = page.locator('.menu__detail');
   await expect(details.nth(2)).toContainText('Français');
   await expect(details.nth(3)).toContainText('Forcés seulement');
@@ -202,14 +209,14 @@ test('paramètres : langue audio et sous-titres préférés', async ({ page }) =
 
   // Retenu au rechargement (l'app rouvre l'accueil).
   await page.reload();
-  await expect(page.locator('.menu__item')).toHaveCount(3);
-  await press(page, 'ArrowRight', 'ArrowRight', 'Enter');
+  await expect(page.locator('.home-panel')).toHaveCount(2);
+  await press(page, 'ArrowUp', 'Enter');
   await expect(details.nth(2)).toContainText('Anglais');
 });
 
 test('paramètres : changer de pays', async ({ page }) => {
   await onboard(page);
-  await press(page, 'ArrowRight', 'ArrowRight', 'Enter');
+  await press(page, 'ArrowUp', 'Enter');
   await expect(page.getByRole('heading', { name: 'Paramètres' })).toBeVisible();
 
   await press(page, 'ArrowDown', 'Enter');

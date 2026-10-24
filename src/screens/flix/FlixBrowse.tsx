@@ -72,21 +72,33 @@ type RowState = CatalogItem[] | 'loading' | 'error';
  */
 export function FlixBrowse(props: FlixBrowseProps) {
   const kind = () => props.position.tab;
-  const [allCategories] = createResource(kind, (current) =>
-    loadCategories(props.credentials, current),
-  );
-  const providerRows = createMemo<CatalogRow[]>(() =>
-    buildRows(
+  // Les catégories sont marquées avec leur onglet : en passant de Films à Séries, la
+  // ressource garde un instant les catégories de films, qui ne doivent pas servir aux séries.
+  const [allCategories] = createResource(kind, async (current) => ({
+    kind: current,
+    list: await loadCategories(props.credentials, current),
+  }));
+  const providerRows = createMemo<CatalogRow[]>(() => {
+    const loaded = allCategories();
+    if (!loaded || loaded.kind !== kind()) return [];
+    return buildRows(
       props.credentials,
       kind(),
-      categoriesForCountry(allCategories() ?? [], app.country()?.code ?? ''),
-    ),
-  );
+      categoriesForCountry(loaded.list, app.country()?.code ?? ''),
+    );
+  });
   // « Continuer à regarder » et « Ma liste » en tête, quand elles ne sont pas vides.
-  const catalogRows = createMemo<CatalogRow[]>(() => [...libraryRows(kind()), ...providerRows()]);
   const [rows, setRows] = createSignal<Record<string, RowState>>({});
-
   const rowKey = (catalogRow: CatalogRow) => `${kind()}|${catalogRow.key}`;
+
+  /** Une rangée chargée sans aucun titre (genre absent du catalogue) n'est pas affichée. */
+  const isEmpty = (catalogRow: CatalogRow) => {
+    const state = rows()[rowKey(catalogRow)];
+    return Array.isArray(state) && state.length === 0;
+  };
+  const catalogRows = createMemo<CatalogRow[]>(() =>
+    [...libraryRows(kind()), ...providerRows()].filter((row) => !isEmpty(row)),
+  );
 
   const ensureLoaded = (catalogRow: CatalogRow) => {
     if (catalogRow.live) return;

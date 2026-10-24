@@ -35,6 +35,9 @@ export default defineConfig(({ mode }) => {
       ...(mode === 'mock' ? [mockXtream()] : []),
       classicScript(),
     ],
+    // Lecteurs vidéo chargés à la demande : Vite les prépare dès le démarrage, sinon il
+    // les optimise en cours de session et la page ouverte échoue (« Outdated Optimize Dep »).
+    optimizeDeps: { include: ['hls.js', 'mpegts.js'] },
     build: {
       target: TV_TARGET,
       cssTarget: TV_TARGET,
