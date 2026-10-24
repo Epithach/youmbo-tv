@@ -156,7 +156,8 @@ test('YoumboFlix : bande-annonce en fond de la bannière après une courte atten
       timeout: 8000,
     },
   );
-  await expect(page.locator('.hero__preview')).not.toHaveAttribute('src', /mute=1/);
+  // Lancée muette : le son monte en fondu à l'apparition, via l'API du lecteur.
+  await expect(page.locator('.hero__preview')).toHaveAttribute('src', /enablejsapi=1/);
 
   // Changer de titre l'arrête.
   await press(page, 'ArrowRight');
@@ -172,10 +173,10 @@ test('fiche film : la bande-annonce joue en musique de fond, avec le son', async
   await press(page, 'Enter');
   await expect(page.locator('.detail__title')).toBeVisible();
 
-  // Après un court délai, la bande-annonce (non muette) démarre derrière la fiche.
+  // Après un court délai, la bande-annonce démarre derrière la fiche (son en fondu).
   const music = page.locator('.detail__music-video');
   await expect(music).toHaveAttribute('src', /youtube-nocookie.*autoplay=1/, { timeout: 8000 });
-  await expect(music).not.toHaveAttribute('src', /mute=1/);
+  await expect(music).toHaveAttribute('src', /enablejsapi=1/);
 
   // Quitter la fiche coupe la musique.
   await press(page, 'Escape');
