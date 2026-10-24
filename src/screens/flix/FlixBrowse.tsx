@@ -87,7 +87,7 @@ export function FlixBrowse(props: FlixBrowseProps) {
       categoriesForCountry(loaded.list, app.country()?.code ?? ''),
     );
   });
-  // « Reprendre » et « Ma liste » en tête, quand elles ne sont pas vides.
+  // « Continuer à regarder » et « Ma liste » en tête, quand elles ne sont pas vides.
   const [rows, setRows] = createSignal<Record<string, RowState>>({});
   const rowKey = (catalogRow: CatalogRow) => `${kind()}|${catalogRow.key}`;
 
