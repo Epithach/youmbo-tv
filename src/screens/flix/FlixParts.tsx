@@ -55,7 +55,7 @@ export function Trailer(props: { youtubeId: string; onClose: () => void }) {
     <div class="trailer">
       <iframe
         class="trailer__frame"
-        src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(props.youtubeId)}?autoplay=1&rel=0`}
+        src={`https://www.youtube.com/embed/${encodeURIComponent(props.youtubeId)}?autoplay=1&rel=0`}
         title="Bande-annonce"
         allow="autoplay; encrypted-media; fullscreen"
       />
