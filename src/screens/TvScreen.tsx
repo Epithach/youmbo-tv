@@ -18,6 +18,7 @@ import { loadLastChannel, saveLastChannel } from '../core/storage';
 import { createPlayer, type Player, type PlayerState } from '../player';
 import { clamp, isDigit, useRemote } from '../ui/remote';
 import { openSideNav, SideNav } from '../ui/SideNav';
+import { slideOnShift } from '../ui/slide';
 import { ChannelInfo } from './tv/ChannelInfo';
 
 const ALL_GROUPS = 'Toutes les chaînes';
@@ -409,7 +410,11 @@ export function TvScreen() {
             )}
           </Show>
 
-          <nav class="tv-groups" classList={{ 'tv-groups--active': zone() === 'groups' }}>
+          <nav
+            class="tv-groups"
+            classList={{ 'tv-groups--active': zone() === 'groups' }}
+            ref={slideOnShift(() => Math.max(0, groupIndex() - GROUPS_BEFORE), '.tv-groups__item')}
+          >
             <For each={around(groups(), groupIndex(), GROUPS_BEFORE, GROUPS_AFTER)}>
               {({ item, index }) => (
                 <span
@@ -428,28 +433,36 @@ export function TvScreen() {
           </nav>
 
           <div class="tv-brands" classList={{ 'tv-brands--active': zone() !== 'groups' }}>
-            <For each={around(brands(), brandIndex(), TILES_BEFORE, TILES_AFTER)}>
-              {({ item, index }) => (
-                <figure
-                  class="tv-tile"
-                  classList={{
-                    'tv-tile--selected': index === brandIndex(),
-                    'tv-tile--playing': item.channels.some((c) => c.id === playing()?.id),
-                  }}
-                  onClick={() => openMenu(index)}
-                >
-                  <Show when={item.logo} fallback={<span class="tv-tile__name">{item.name}</span>}>
-                    {(logo) => <img class="tv-tile__logo" src={logo()} alt="" loading="lazy" />}
-                  </Show>
-                  <figcaption class="tv-tile__caption">
-                    {item.name}
-                    <Show when={item.channels.length > 1}>
-                      <span class="tv-tile__count">{item.channels.length}</span>
+            <div
+              class="tv-brands__track"
+              ref={slideOnShift(() => Math.max(0, brandIndex() - TILES_BEFORE), '.tv-tile')}
+            >
+              <For each={around(brands(), brandIndex(), TILES_BEFORE, TILES_AFTER)}>
+                {({ item, index }) => (
+                  <figure
+                    class="tv-tile"
+                    classList={{
+                      'tv-tile--selected': index === brandIndex(),
+                      'tv-tile--playing': item.channels.some((c) => c.id === playing()?.id),
+                    }}
+                    onClick={() => openMenu(index)}
+                  >
+                    <Show
+                      when={item.logo}
+                      fallback={<span class="tv-tile__name">{item.name}</span>}
+                    >
+                      {(logo) => <img class="tv-tile__logo" src={logo()} alt="" loading="lazy" />}
                     </Show>
-                  </figcaption>
-                </figure>
-              )}
-            </For>
+                    <figcaption class="tv-tile__caption">
+                      {item.name}
+                      <Show when={item.channels.length > 1}>
+                        <span class="tv-tile__count">{item.channels.length}</span>
+                      </Show>
+                    </figcaption>
+                  </figure>
+                )}
+              </For>
+            </div>
           </div>
         </div>
       </Show>

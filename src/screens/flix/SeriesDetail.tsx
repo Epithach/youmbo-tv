@@ -12,6 +12,7 @@ import { library, progressKey } from '../../core/library';
 import type { XtreamCredentials } from '../../core/xtream';
 import { Marquee } from '../../ui/Marquee';
 import { clamp, useRemote } from '../../ui/remote';
+import { slideOnShift } from '../../ui/slide';
 import { DetailMusic } from './DetailMusic';
 import { Badges, PosterStrip, Trailer } from './FlixParts';
 import { formatTime } from './PlayerControls';
@@ -252,7 +253,13 @@ export function SeriesDetail(props: SeriesDetailProps) {
                 )}
               </For>
             </nav>
-            <div class="episodes">
+            <div
+              class="episodes"
+              ref={slideOnShift(
+                () => Math.max(0, props.position.episode - EPISODES_BEFORE),
+                '.episode-card',
+              )}
+            >
               <For each={episodeWindow()}>
                 {({ episode, index }) => (
                   <EpisodeCard

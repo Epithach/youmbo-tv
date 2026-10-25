@@ -2235,3 +2235,207 @@ body {
   top: 45%;
   bottom: auto;
 }
+
+/* --- Thème « verre dépoli » (inspiré de SundukTV), version sombre --- */
+
+body {
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(79, 140, 255, 0.1), transparent 55%),
+    radial-gradient(ellipse at 100% 100%, rgba(232, 180, 90, 0.06), transparent 50%), var(--bg);
+}
+
+/* Sélection : pastille blanche, texte sombre, comme sur une Apple TV. */
+.menu__item {
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+.menu__item--selected {
+  border-color: transparent;
+  background: rgba(232, 236, 244, 0.94);
+  color: #0d0f14;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+
+.menu__item--selected .menu__detail {
+  color: rgba(13, 15, 20, 0.65);
+}
+
+.list__row {
+  border-radius: 12px;
+}
+
+.list__row--selected {
+  background: var(--glass-strong);
+}
+
+.list--active .list__row--selected {
+  background: rgba(232, 236, 244, 0.94);
+  color: #0d0f14;
+}
+
+.controls__button {
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+.controls__button--focused {
+  border-color: transparent;
+  background: rgba(232, 236, 244, 0.94);
+  color: #0d0f14;
+}
+
+.setup__input,
+.search__input {
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+.setup__input:focus {
+  border-color: rgba(232, 236, 244, 0.7);
+}
+
+.seasons__item {
+  border: 1px solid var(--glass-border);
+}
+
+/* Affiches : coins arrondis, ombre ; la sélection est cerclée de blanc. */
+.poster {
+  border: 0;
+  border-radius: 14px;
+}
+
+.poster__image,
+.poster__placeholder {
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+.poster--selected .poster__image,
+.poster--selected .poster__placeholder {
+  box-shadow:
+    0 0 0 3px #fff,
+    0 16px 32px rgba(0, 0, 0, 0.55);
+}
+
+.flix-row__title {
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.episode-card__image {
+  border-radius: 14px;
+}
+
+.zap-banner,
+.channel-number {
+  border: 1px solid var(--glass-border);
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+/* --- Animations --- */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+/* Chaque écran apparaît en fondu. */
+.app > * {
+  animation: fade-in 0.3s ease;
+}
+
+.tv-brands__track {
+  display: flex;
+  align-items: flex-end;
+}
+
+/* Place pour l'affiche sélectionnée, qui se soulève sans être coupée. */
+.flix-row__posters {
+  margin: -14px 0 -18px;
+  padding: 14px 0 18px;
+}
+
+.poster,
+.episode-card,
+.menu__item,
+.controls__button,
+.seasons__item,
+.list__row {
+  transition:
+    transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.26s ease,
+    opacity 0.26s ease;
+}
+
+.poster__image,
+.poster__placeholder,
+.episode-card__image {
+  transition:
+    box-shadow 0.26s ease,
+    border-color 0.2s ease;
+}
+
+.poster--selected {
+  transform: translateY(-8px) scale(1.06);
+}
+
+.episode-card--selected {
+  transform: scale(1.04);
+}
+
+.menu__item--selected {
+  transform: scale(1.03);
+}
+
+.controls__button--focused {
+  transform: scale(1.06);
+}
+
+/* Changement de rangée : la nouvelle arrive par le bas. */
+.flix-row--active {
+  animation: rise-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Bannière : texte et image du nouveau titre en fondu. */
+.hero__content {
+  animation: rise-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.hero__backdrop {
+  animation: fade-in 0.5s ease;
+}
+
+.showcase__stage {
+  animation: rise-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

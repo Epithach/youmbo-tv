@@ -3,6 +3,7 @@ import { displayTitle, resizePoster } from '../../core/catalog-display';
 import type { CatalogItem } from '../../core/catalog';
 import { Marquee } from '../../ui/Marquee';
 import { useRemote } from '../../ui/remote';
+import { slideOnShift } from '../../ui/slide';
 
 /** Éléments partagés par la bannière et les fiches de YoumboFlix. */
 
@@ -85,7 +86,10 @@ export function PosterStrip(props: {
     <Show when={props.items.length > 0}>
       <section class="flix-row" classList={{ 'flix-row--active': props.active }}>
         <h2 class="flix-row__title">{props.title}</h2>
-        <div class="flix-row__posters">
+        <div
+          class="flix-row__posters"
+          ref={slideOnShift(() => Math.max(0, props.selected - BEFORE), '.poster')}
+        >
           <For each={window()}>
             {({ item, index }) => (
               <figure

@@ -17,6 +17,7 @@ import type { XtreamCredentials } from '../../core/xtream';
 import { Marquee } from '../../ui/Marquee';
 import { clamp, useRemote } from '../../ui/remote';
 import { openSideNav, SideNav } from '../../ui/SideNav';
+import { slideOnShift } from '../../ui/slide';
 import { animeOpenings } from './DetailMusic';
 import { Hero } from './Hero';
 
@@ -63,7 +64,8 @@ type RowState = CatalogItem[] | 'loading' | 'error';
  * qu'à l'approche.
  */
 export function FlixBrowse(props: FlixBrowseProps) {
-  const kind = () => props.position.tab;
+  // Mémorisé : sinon chaque déplacement reconstruirait toutes les rangées.
+  const kind = createMemo(() => props.position.tab);
   // Les catégories sont marquées avec leur onglet : en passant de Films à Séries, la
   // ressource garde un instant les catégories de films, qui ne doivent pas servir aux séries.
   const [allCategories] = createResource(kind, async (current) => ({
@@ -105,7 +107,8 @@ export function FlixBrowse(props: FlixBrowseProps) {
     );
   };
 
-  const row = () => props.position.rows[kind()];
+  // Mémorisée : changer d'affiche ne recrée pas la rangée (son glissement reste fluide).
+  const row = createMemo(() => props.position.rows[kind()]);
   const column = (catalogRow: CatalogRow) => props.position.columns[rowKey(catalogRow)] ?? 0;
 
   const visibleRows = createMemo(() => {
@@ -286,7 +289,10 @@ function PosterRow(props: PosterRowProps) {
       }
     >
       <Show when={window().length > 0} fallback={<p class="flix-row__message">Vide</p>}>
-        <div class="flix-row__posters">
+        <div
+          class="flix-row__posters"
+          ref={slideOnShift(() => Math.max(0, props.selected - POSTERS_BEFORE), '.poster')}
+        >
           <button
             type="button"
             class="flix-row__arrow flix-row__arrow--left"
