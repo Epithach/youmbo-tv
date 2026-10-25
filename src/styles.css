@@ -2369,10 +2369,13 @@ body {
   align-items: flex-end;
 }
 
-/* Place pour l'affiche sélectionnée, qui se soulève sans être coupée. */
+/*
+ * Place pour l'affiche sélectionnée, qui se soulève et grandit (+8 px, ×1,06,
+ * contour de 3 px) sans être coupée, y compris la première de la rangée.
+ */
 .flix-row__posters {
-  margin: -14px 0 -18px;
-  padding: 14px 0 18px;
+  margin: -28px 0 -20px -16px;
+  padding: 28px 0 20px 16px;
 }
 
 .poster,
