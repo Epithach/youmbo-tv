@@ -61,8 +61,9 @@ export function Hero(props: HeroProps) {
     <Show when={props.item}>
       {(item) => (
         <section class="hero">
-          <Show when={backdrop()}>
-            {(src) => <img class="hero__backdrop" src={src()} alt="" />}
+          {/* Recréées à chaque titre : image et texte du nouveau titre arrivent en fondu. */}
+          <Show when={backdrop()} keyed>
+            {(src) => <img class="hero__backdrop" src={src} alt="" />}
           </Show>
           <Show when={preview()}>
             {(id) => (
@@ -75,19 +76,21 @@ export function Hero(props: HeroProps) {
               />
             )}
           </Show>
-          <div class="hero__content">
-            <h1 class="hero__title">{displayTitle(movie()?.name || item().name)}</h1>
-            <Badges
-              rating={movie()?.rating ?? item().rating}
-              age={movie()?.age || movie()?.mpaa_rating}
-              year={movie()?.releasedate?.slice(0, 4) ?? item().year}
-              genre={movie()?.genre ?? item().genreText}
-              duration={movie()?.duration}
-            />
-            <Show when={plot()}>
-              <p class="hero__plot">{plot()}</p>
-            </Show>
-          </div>
+          <Show when={item().id} keyed>
+            <div class="hero__content">
+              <h1 class="hero__title">{displayTitle(movie()?.name || item().name)}</h1>
+              <Badges
+                rating={movie()?.rating ?? item().rating}
+                age={movie()?.age || movie()?.mpaa_rating}
+                year={movie()?.releasedate?.slice(0, 4) ?? item().year}
+                genre={movie()?.genre ?? item().genreText}
+                duration={movie()?.duration}
+              />
+              <Show when={plot()}>
+                <p class="hero__plot">{plot()}</p>
+              </Show>
+            </div>
+          </Show>
         </section>
       )}
     </Show>
