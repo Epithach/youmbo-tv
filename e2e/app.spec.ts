@@ -191,9 +191,15 @@ test('YoumboFlix : séries par genre, saisons et épisodes', async ({ page }) =>
   await press(page, 'ArrowRight', 'Enter');
   await expect(rowTitles(page).first()).toBeVisible();
 
-  // ↑ ↑ vers les onglets (au-dessus de la bannière), → Séries, ↓ ↓ dans les rangées.
-  await press(page, 'ArrowUp', 'ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowDown');
-  await expect(page.locator('.flix__tab--selected')).toHaveText('Séries');
+  // ← sur la première affiche : le bandeau de gauche s'ouvre sur Films ; ↓ Séries, OK.
+  await press(page, 'ArrowLeft');
+  await expect(page.locator('.side-nav--open .side-nav__item--selected')).toHaveAttribute(
+    'aria-label',
+    'Films',
+  );
+  await press(page, 'ArrowDown', 'Enter');
+  await expect(page.locator('.side-nav')).not.toHaveClass(/side-nav--open/);
+  await expect(page.locator('.side-nav__item--current')).toHaveAttribute('aria-label', 'Séries');
   await expect(page.locator('.flix__rows')).toContainText('Séries 2026');
 
   await activePosters(page);
@@ -226,7 +232,8 @@ test('recherche dans YoumboFlix : films et séries seulement', async ({ page }) 
   await onboard(page);
   await press(page, 'ArrowRight', 'Enter');
   await expect(rowTitles(page).first()).toBeVisible();
-  await press(page, 'ArrowUp', 'ArrowUp', 'ArrowRight', 'ArrowRight', 'Enter');
+  // Bandeau de gauche : Films → ↑ Télévision → ↑ Recherche.
+  await press(page, 'ArrowLeft', 'ArrowUp', 'ArrowUp', 'Enter');
   await expect(
     page.getByRole('heading', { name: 'Rechercher un film ou une série' }),
   ).toBeVisible();
@@ -238,7 +245,32 @@ test('recherche dans YoumboFlix : films et séries seulement', async ({ page }) 
 
   // Retour : on revient dans YoumboFlix.
   await press(page, 'Escape');
-  await expect(page.locator('.flix__brand')).toBeVisible();
+  await expect(rowTitles(page).first()).toBeVisible();
+});
+
+test('bandeau de gauche : ← tout à gauche, Retour referme, OK change de partie', async ({
+  page,
+}) => {
+  await onboard(page);
+  await press(page, 'Enter');
+  // TV : ← vers les catégories, puis encore ← : le bandeau s'ouvre sur Télévision.
+  await press(page, 'ArrowLeft', 'ArrowLeft');
+  const nav = page.locator('.side-nav');
+  await expect(nav).toHaveClass(/side-nav--open/);
+  await expect(nav.locator('.side-nav__item--selected')).toHaveAttribute(
+    'aria-label',
+    'Télévision',
+  );
+
+  // Retour referme le bandeau sans quitter la TV.
+  await press(page, 'Escape');
+  await expect(nav).not.toHaveClass(/side-nav--open/);
+  await expect(page.locator('.column--groups')).toBeVisible();
+
+  // ↓ ↓ ↓ Paramètres, OK.
+  await press(page, 'ArrowLeft', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'Enter');
+  await expect(page.getByRole('heading', { name: 'Paramètres' })).toBeVisible();
+  await expect(nav.locator('.side-nav__item--current')).toHaveAttribute('aria-label', 'Paramètres');
 });
 
 test('paramètres : langue audio et sous-titres préférés', async ({ page }) => {

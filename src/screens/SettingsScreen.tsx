@@ -9,6 +9,7 @@ import {
 } from '../core/preferences';
 import { Menu, pressMenuItem, type MenuItem } from '../ui/Menu';
 import { createSelection, useRemote } from '../ui/remote';
+import { openSideNav, SideNav } from '../ui/SideNav';
 
 /** N'affiche que l'hôte : le lien complet contient les identifiants. */
 function describeUrl(url: string | undefined): string {
@@ -72,11 +73,13 @@ export function SettingsScreen() {
     if (key === 'up') selection.move(-1);
     else if (key === 'down') selection.move(1);
     else if (key === 'ok') pressMenuItem(items(), selection.index());
+    else if (key === 'left') openSideNav();
     else if (key === 'back') app.navigate('home');
   });
 
   return (
-    <div class="screen screen--center">
+    <div class="screen screen--center has-side-nav">
+      <SideNav current="settings" />
       <div class="picker">
         <h1 class="screen__title">Paramètres</h1>
         <Menu items={items()} selected={selection.index()} onSelect={selection.setIndex} />

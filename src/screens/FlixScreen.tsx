@@ -1,4 +1,4 @@
-import { createSignal, Match, onMount, Show, Switch } from 'solid-js';
+import { createEffect, createSignal, Match, on, onMount, Show, Switch } from 'solid-js';
 import { app } from '../app-state';
 import {
   episodeUrl,
@@ -37,7 +37,22 @@ type View =
 export function FlixScreen() {
   const [view, setView] = createSignal<View>({ kind: 'browse' });
   // Les positions survivent à l'ouverture d'une fiche et à la lecture.
-  const [browse, setBrowse] = createSignal<BrowsePosition>(INITIAL_POSITION);
+  const [browse, setBrowse] = createSignal<BrowsePosition>({
+    ...INITIAL_POSITION,
+    tab: app.flixTab(),
+  });
+  // Films ou Séries choisis dans le bandeau de gauche : retour au catalogue demandé.
+  createEffect(
+    on(
+      app.flixTab,
+      (tab) => {
+        if (tab === browse().tab) return;
+        setBrowse({ ...browse(), tab });
+        setView({ kind: 'browse' });
+      },
+      { defer: true },
+    ),
+  );
   const [seriesPosition, setSeriesPosition] = createSignal<SeriesPosition>({
     season: 0,
     episode: 0,
@@ -48,6 +63,7 @@ export function FlixScreen() {
     const fromSearch = app.takePending('catalog');
     if (fromSearch) {
       setBrowse({ ...browse(), tab: fromSearch.item.kind });
+      app.openFlix(fromSearch.item.kind);
       open(fromSearch.item);
     }
   });

@@ -16,6 +16,7 @@ import { loadLastChannel, saveLastChannel } from '../core/storage';
 import { createPlayer, type Player, type PlayerState } from '../player';
 import { Marquee } from '../ui/Marquee';
 import { clamp, isDigit, useRemote } from '../ui/remote';
+import { openSideNav, SideNav } from '../ui/SideNav';
 import { WindowedList } from '../ui/WindowedList';
 import { ChannelInfo } from './tv/ChannelInfo';
 
@@ -194,6 +195,8 @@ export function TvScreen() {
         return;
       }
       case 'left':
+        // Déjà dans les catégories : ← va au bandeau de gauche.
+        if (column() === 'groups') return openSideNav();
         return setColumn('groups');
       case 'right': {
         if (column() === 'groups') {
@@ -267,7 +270,10 @@ export function TvScreen() {
   onCleanup(() => player?.destroy());
 
   return (
-    <div class="tv" classList={{ 'tv--fullscreen': fullscreen() }}>
+    <div class="tv" classList={{ 'tv--fullscreen': fullscreen(), 'has-side-nav': !fullscreen() }}>
+      <Show when={!fullscreen()}>
+        <SideNav current="tv" />
+      </Show>
       <nav class="column column--groups">
         <WindowedList
           items={groups()}
