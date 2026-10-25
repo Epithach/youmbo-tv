@@ -43,7 +43,15 @@ const CHANNELS: Record<string, { prefix: string; names: string[] }> = {
   },
   '2': {
     prefix: 'FR',
-    names: ['Sport Direct 1', 'Sport Direct 2', 'Foot Live', 'Mécaniques', 'DAZN 1', 'DAZN 2', 'DAZN 3'],
+    names: [
+      'Sport Direct 1',
+      'Sport Direct 2',
+      'Foot Live',
+      'Mécaniques',
+      'DAZN 1',
+      'DAZN 2',
+      'DAZN 3',
+    ],
   },
   '3': { prefix: 'FR', names: ['Info Continu', 'Info Monde', 'Parlement TV'] },
   '4': { prefix: 'BE', names: ['La Une Belge', 'Brussel TV', 'Wallonie Plus'] },
