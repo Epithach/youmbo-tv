@@ -1,6 +1,6 @@
 import { createMemo, createRoot, createSignal } from 'solid-js';
 import { ALL_COUNTRIES, indexByCountry, type CountryEntry } from './core/country';
-import type { CatalogItem } from './core/catalog';
+import type { CatalogItem, CatalogKind } from './core/catalog';
 import type { Channel, Playlist } from './core/m3u';
 import { fetchDevPlaylistUrl } from './core/net';
 import { loadPlaylistFrom } from './core/playlist-source';
@@ -38,6 +38,8 @@ function createAppState() {
   const [pending, setPending] = createSignal<PendingOpen>();
   /** Recherche ouverte depuis la TV (chaînes) ou depuis YoumboFlix (films et séries). */
   const [searchScope, setSearchScope] = createSignal<SearchScope>('tv');
+  /** Catalogue affiché dans YoumboFlix (Films ou Séries), choisi dans le bandeau. */
+  const [flixTab, setFlixTab] = createSignal<CatalogKind>('movies');
 
   const countries = createMemo<CountryEntry[]>(() => {
     const current = playlist();
@@ -116,6 +118,11 @@ function createAppState() {
     setScreen('setup');
   }
 
+  function openFlix(tab: CatalogKind) {
+    setFlixTab(tab);
+    setScreen('flix');
+  }
+
   function openSearch(scope: SearchScope) {
     setSearchScope(scope);
     setScreen('search');
@@ -143,6 +150,8 @@ function createAppState() {
     navigate: setScreen,
     openResult,
     takePending,
+    flixTab,
+    openFlix,
     searchScope,
     openSearch,
     closeSearch,

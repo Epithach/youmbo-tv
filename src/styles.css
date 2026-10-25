@@ -13,6 +13,7 @@
   --text-muted: #8a93a6;
   --error: #ff6b6b;
   --row-height: 56px;
+  --side-nav-width: 88px;
 }
 
 * {
@@ -335,35 +336,6 @@ body {
   flex-direction: column;
   padding: 32px 48px;
   overflow: hidden;
-}
-
-.flix__header {
-  display: flex;
-  align-items: baseline;
-  margin-bottom: 24px;
-}
-
-.flix__brand {
-  margin-right: 48px;
-  color: var(--accent);
-  font-size: 36px;
-  font-weight: 700;
-}
-
-.flix__tab {
-  margin-right: 32px;
-  padding: 6px 0;
-  border-bottom: 3px solid transparent;
-  color: var(--text-muted);
-  font-size: 24px;
-}
-
-.flix__tab--selected {
-  color: var(--text);
-}
-
-.flix__tabs--active .flix__tab--selected {
-  border-bottom-color: var(--accent);
 }
 
 .flix__message,
@@ -783,7 +755,6 @@ body {
 
 /* --- Souris --- */
 
-.flix__tab,
 .flix-row__arrow,
 .poster,
 .seasons__item,
@@ -1558,4 +1529,119 @@ body {
 
 .detail__content {
   z-index: 1;
+}
+
+/* --- Bandeau de navigation à gauche --- */
+
+/* Écrans qui laissent la place au bandeau replié. */
+.has-side-nav {
+  padding-left: var(--side-nav-width);
+}
+
+.flix.has-side-nav {
+  padding-left: calc(var(--side-nav-width) + 48px);
+}
+
+/*
+ * Replié : une colonne d'icônes translucide, toujours visible. Ouvert (← tout
+ * à gauche, ou survol à la souris) : plus opaque, avec les libellés, par-dessus l'écran.
+ */
+.side-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: var(--side-nav-width);
+  padding: 32px 16px;
+  overflow: hidden;
+  background: rgba(13, 15, 20, 0.55);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transition:
+    width 0.25s ease,
+    background 0.25s ease;
+}
+
+.side-nav--open,
+.side-nav:hover {
+  width: 280px;
+  background: rgba(13, 15, 20, 0.88);
+  box-shadow: 24px 0 48px rgba(0, 0, 0, 0.45);
+}
+
+.side-nav__item {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 56px;
+  margin: 6px 0;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 22px;
+  white-space: nowrap;
+  cursor: pointer;
+  opacity: 0.75;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.side-nav__item--bottom {
+  margin-top: 48px;
+}
+
+.side-nav__item--current {
+  color: var(--accent);
+  opacity: 1;
+}
+
+.side-nav__item:hover,
+.side-nav__item--selected {
+  background: var(--surface-active);
+  color: var(--text);
+  opacity: 1;
+}
+
+.side-nav__icon {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.side-nav__logo {
+  fill: currentColor;
+  stroke: none;
+  font-size: 7px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.side-nav__fill {
+  fill: currentColor;
+  stroke: none;
+}
+
+.side-nav__label {
+  margin-left: 22px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.side-nav--open .side-nav__label,
+.side-nav:hover .side-nav__label {
+  opacity: 1;
 }
