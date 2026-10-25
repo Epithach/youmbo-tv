@@ -205,9 +205,19 @@ test('YoumboFlix : séries par genre, saisons et épisodes', async ({ page }) =>
   await activePosters(page);
   await press(page, 'Enter');
   await expect(page.locator('.seasons__item').first()).toHaveText('Saison 1');
+  await expect(page.locator('.series__count-number')).toHaveText('6');
+
+  // Épisodes en vignettes : → passe au suivant.
+  const selectedCard = page.locator('.episode-card--selected');
+  await expect(selectedCard).toContainText('Saison 1 · Épisode 1');
   await press(page, 'ArrowRight');
+  await expect(selectedCard).toContainText('Saison 1 · Épisode 2');
+
+  // ↑ vers les saisons, → Saison 2 : retour au premier épisode.
+  await press(page, 'ArrowUp', 'ArrowRight');
   await expect(page.locator('.seasons__item--selected')).toHaveText('Saison 2');
-  await expect(page.locator('.detail .list__row').first()).toContainText('1. Épisode 1');
+  await press(page, 'ArrowDown');
+  await expect(selectedCard).toContainText('Saison 2 · Épisode 1');
 });
 
 test('recherche dans la TV : chaînes seulement', async ({ page }) => {

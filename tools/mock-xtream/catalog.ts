@@ -265,7 +265,11 @@ export function seriesInfo(show: Series) {
       episode_num: e + 1,
       title: `${show.name} - S0${s}E0${e + 1} - Épisode ${e + 1}`,
       container_extension: 'mp4',
-      info: { duration: '00:00:52', plot: `Épisode ${e + 1} de la saison ${s}.` },
+      info: {
+        duration: '00:00:52',
+        plot: `Épisode ${e + 1} de la saison ${s}.`,
+        movie_image: `/mock-photo/backdrop-${show.series_id}${s}${e + 1}.svg`,
+      },
     }));
   }
   return { info: { ...show, youtube_trailer: SAMPLE_TRAILER }, episodes };

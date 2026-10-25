@@ -89,6 +89,12 @@ function createLibrary() {
       return entry && entry.position >= MIN_RESUME_SECONDS ? entry.position : undefined;
     },
 
+    /** Part déjà vue (0 à 1), pour la barre de progression d'un épisode. */
+    progressRatio(key: string): number | undefined {
+      const entry = data().progress.find((p) => p.key === key);
+      return entry && entry.duration > 0 ? Math.min(1, entry.position / entry.duration) : undefined;
+    },
+
     saveProgress(entry: Omit<WatchProgress, 'updatedAt'>) {
       const finished = entry.duration > 0 && entry.position >= entry.duration * FINISHED_RATIO;
       update((current) => {
