@@ -6,7 +6,7 @@ import {
   type CatalogItem,
   type VodDetails,
 } from '../../core/catalog';
-import { displayTitle, resizePoster } from '../../core/catalog-display';
+import { displayTitle, durationMinutes, resizePoster } from '../../core/catalog-display';
 import { library, progressKey } from '../../core/library';
 import type { XtreamCredentials } from '../../core/xtream';
 import { Menu, pressMenuItem, type MenuItem } from '../../ui/Menu';
@@ -28,8 +28,9 @@ interface MovieDetailProps {
 const SIMILAR_LIMIT = 20;
 
 /**
- * Fiche d'un film : affiche, note, âge, résumé et boutons (Lecture, Ma liste,
- * Bande-annonce) ; ↓ descend sur les titres similaires (même catégorie).
+ * Fiche d'un film, en grand format comme les séries : image plein écran,
+ * note et titre en grand avec le résumé et les boutons à gauche ; durée et
+ * titres similaires à droite (↓ pour y aller).
  */
 export function MovieDetail(props: MovieDetailProps) {
   const [details] = createResource(() => loadVodDetails(props.credentials, props.item.id));
@@ -45,6 +46,21 @@ export function MovieDetail(props: MovieDetailProps) {
   const [trailer, setTrailer] = createSignal(false);
 
   const info = () => details()?.info;
+  const title = () => displayTitle(info()?.name || props.item.name);
+  /** Titre affiché en grand : sans l'année entre parenthèses, déjà dans les infos. */
+  const bigTitle = () => title().replace(/\s*\(\d{4}\)\s*$/, '');
+  const rating = () => {
+    const value = Number(info()?.rating ?? props.item.rating);
+    return value > 0 ? value.toFixed(1) : undefined;
+  };
+  const minutes = () => durationMinutes(info()?.duration);
+  const year = () => info()?.releasedate?.slice(0, 4) || props.item.year;
+  const backdrop = () =>
+    firstImage(info()?.backdrop_path) ||
+    props.item.backdrop ||
+    info()?.movie_image ||
+    props.item.poster;
+
   const resumeAt = () => library.resumePosition(progressKey('movie', props.item.id));
   const items = (): MenuItem[] => [
     ...(resumeAt()
@@ -86,43 +102,55 @@ export function MovieDetail(props: MovieDetailProps) {
   });
 
   return (
-    <div class="detail">
-      <Show when={resizePoster(firstImage(info()?.backdrop_path), 1280)}>
-        {(src) => <img class="detail__backdrop" src={src()} alt="" />}
+    <div class="detail showcase">
+      <Show when={resizePoster(backdrop(), 1280)}>
+        {(src) => <img class="showcase__backdrop" src={src()} alt="" />}
       </Show>
-      <div class="detail__content">
-        <Show when={resizePoster(info()?.movie_image ?? props.item.poster, 342)}>
-          {(src) => <img class="detail__poster" src={src()} alt="" />}
-        </Show>
-        <div class="detail__text">
-          <h1 class="detail__title">{displayTitle(info()?.name || props.item.name)}</h1>
-          <Badges
-            rating={info()?.rating ?? props.item.rating}
-            age={info()?.age || info()?.mpaa_rating}
-            year={info()?.releasedate?.slice(0, 4)}
-            genre={info()?.genre}
-            duration={info()?.duration}
-          />
+      <div class="showcase__shade" />
+
+      <div class="showcase__stage">
+        <section class="showcase__main">
+          <Show when={rating()}>
+            <p class="showcase__rating">
+              {rating()} <span>/ 10</span>
+            </p>
+          </Show>
+          <h1 class="showcase__title detail__title">{bigTitle()}</h1>
           <Show
             when={!details.loading}
-            fallback={<p class="detail__plot">Chargement de la fiche…</p>}
+            fallback={<p class="showcase__plot">Chargement de la fiche…</p>}
           >
-            <p class="detail__plot">
-              {info()?.plot || info()?.description || 'Pas de résumé disponible.'}
+            <p class="showcase__plot">
+              <svg class="showcase__plot-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="10.5" />
+                <path d="M10 8.5v7l5.5-3.5z" />
+              </svg>
+              <span>{info()?.plot || info()?.description || 'Pas de résumé disponible.'}</span>
             </p>
-            <Show when={info()?.director}>
-              <p class="detail__credits">Réalisation : {info()?.director}</p>
-            </Show>
-            <Show when={info()?.cast || info()?.actors}>
-              <p class="detail__credits">Avec : {info()?.cast || info()?.actors}</p>
-            </Show>
           </Show>
+          <Badges age={info()?.age || info()?.mpaa_rating} year={year()} genre={info()?.genre} />
           <Menu
             items={items()}
             selected={inSimilar() ? -1 : selected()}
             onSelect={setSelected}
             direction="row"
           />
+        </section>
+
+        <section class="showcase__side">
+          <div class="showcase__count">
+            <span class="showcase__count-number">{minutes() ?? year() ?? '–'}</span>
+            <div class="showcase__count-text">
+              <strong>{minutes() ? 'minutes' : 'Film'}</strong>
+              <small>
+                {info()?.director ? `Réalisation : ${info()?.director}` : (info()?.genre ?? '')}
+              </small>
+            </div>
+            <span class="showcase__count-line" />
+          </div>
+          <Show when={info()?.cast || info()?.actors}>
+            <p class="showcase__cast">Avec {info()?.cast || info()?.actors}</p>
+          </Show>
           <PosterStrip
             title="Titres similaires"
             items={similar()}
@@ -130,12 +158,13 @@ export function MovieDetail(props: MovieDetailProps) {
             active={inSimilar()}
             onOpen={props.onOpen}
           />
-        </div>
+        </section>
       </div>
+
       <DetailMusic
         credentials={props.credentials}
         item={props.item}
-        year={Number(info()?.releasedate?.slice(0, 4)) || undefined}
+        year={Number(year()) || undefined}
         trailerId={info()?.youtube_trailer}
         paused={trailer()}
       />
