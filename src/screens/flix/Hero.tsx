@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createEffect, createSignal, onCleanup, Show } from 'solid-js';
 import { firstImage, loadVodDetails, type CatalogItem, type VodInfo } from '../../core/catalog';
 import { displayTitle, resizePoster } from '../../core/catalog-display';
 import { loadVolume } from '../../core/storage';
@@ -13,15 +13,9 @@ const PREVIEW_DELAY_MS = 1000;
 /** La bande-annonce apparaît, avec le son en fondu, 6 s après la sélection du titre. */
 const PREVIEW_REVEAL_MS = 6000 - PREVIEW_DELAY_MS;
 
-export const HERO_BUTTONS = ['▶ Lecture', 'Plus d’infos'] as const;
-
 interface HeroProps {
   credentials: XtreamCredentials;
   item: CatalogItem | undefined;
-  /** La bannière a le focus : ses boutons sont actifs. */
-  focused: boolean;
-  button: number;
-  onPress: (button: number) => void;
 }
 
 /**
@@ -66,7 +60,7 @@ export function Hero(props: HeroProps) {
   return (
     <Show when={props.item}>
       {(item) => (
-        <section class="hero" classList={{ 'hero--focused': props.focused }}>
+        <section class="hero">
           <Show when={backdrop()}>
             {(src) => <img class="hero__backdrop" src={src()} alt="" />}
           </Show>
@@ -93,21 +87,6 @@ export function Hero(props: HeroProps) {
             <Show when={plot()}>
               <p class="hero__plot">{plot()}</p>
             </Show>
-            <div class="hero__buttons">
-              <For each={HERO_BUTTONS}>
-                {(label, index) => (
-                  <span
-                    class="controls__button"
-                    classList={{
-                      'controls__button--focused': props.focused && index() === props.button,
-                    }}
-                    onClick={() => props.onPress(index())}
-                  >
-                    {label}
-                  </span>
-                )}
-              </For>
-            </div>
           </div>
         </section>
       )}

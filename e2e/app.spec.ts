@@ -94,10 +94,12 @@ test('YoumboFlix : rangées par genre et fiche film', async ({ page }) => {
   await onboard(page);
   await press(page, 'ArrowRight', 'Enter');
 
+  // Une seule rangée affichée à la fois, sous la bannière.
   await expect(rowTitles(page).first()).toHaveText('Récemment ajoutés');
-  await expect(rowTitles(page).nth(1)).toHaveText('Action & Aventure');
+  await expect(rowTitles(page)).toHaveCount(1);
 
   await press(page, 'ArrowDown');
+  await expect(rowTitles(page).first()).toHaveText('Action & Aventure');
   await activePosters(page);
   await press(page, 'Enter');
   await expect(page.locator('.detail__title')).toBeVisible();
@@ -118,14 +120,13 @@ test('YoumboFlix : bannière, note, âge, bande-annonce et titres similaires', a
   await press(page, 'ArrowRight', 'Enter');
   await expect(rowTitles(page).first()).toBeVisible();
 
-  // ↑ : la bannière met en avant la première nouveauté, avec Lecture et Plus d'infos.
-  await press(page, 'ArrowUp');
-  await expect(page.locator('.hero--focused')).toBeVisible();
+  // La bannière met en avant l'affiche sélectionnée, sans boutons.
   await expect(page.locator('.hero__title')).toHaveText('L’Ombre du Nord (2000)');
-  await expect(page.locator('.hero .controls__button')).toHaveText(['▶ Lecture', 'Plus d’infos']);
+  await expect(page.locator('.hero .controls__button')).toHaveCount(0);
 
-  // Plus d'infos : fiche avec note, âge, bande-annonce et similaires.
-  await press(page, 'ArrowRight', 'Enter');
+  // OK : fiche avec note, âge, bande-annonce et similaires.
+  await activePosters(page);
+  await press(page, 'Enter');
   await expect(page.locator('.detail__title')).toHaveText('L’Ombre du Nord (2000)');
   await expect(page.locator('.detail .badge--rating')).toBeVisible();
   await expect(page.locator('.detail .menu__label')).toContainText(['▶ Bande-annonce']);
@@ -205,7 +206,9 @@ test('YoumboFlix : séries par genre, saisons et épisodes', async ({ page }) =>
   await activePosters(page);
   await press(page, 'Enter');
   await expect(page.locator('.seasons__item').first()).toHaveText('Saison 1');
-  await expect(page.locator('.series__count-number')).toHaveText('6');
+  // Série pas commencée : le cercle montre l'épisode 1, et le nombre d'épisodes à côté.
+  await expect(page.locator('.series__count-number')).toHaveText('1');
+  await expect(page.locator('.series__count-text')).toContainText('Saison 1 · 6 épisodes');
 
   // Épisodes en vignettes : → passe au suivant.
   const selectedCard = page.locator('.episode-card--selected');

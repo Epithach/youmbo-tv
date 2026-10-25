@@ -141,11 +141,6 @@ export function FlixScreen() {
               position={browse()}
               onPositionChange={setBrowse}
               onOpen={open}
-              onPlay={(item) =>
-                item.kind === 'movies'
-                  ? playMovie(credentials(), item, undefined, false)
-                  : open(item)
-              }
             />
           </Match>
           <Match when={asView('movie')} keyed>

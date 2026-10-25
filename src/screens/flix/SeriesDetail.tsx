@@ -63,6 +63,16 @@ export function SeriesDetail(props: SeriesDetailProps) {
   const bigTitle = () => title().replace(/\s*\(\d{4}\)\s*$/, '');
   const season = () => seasons()[props.position.season];
   const episodes = () => season()?.episodes ?? [];
+  /** Épisode en cours de visionnage dans cette saison (indice), s'il y en a un. */
+  const inProgress = () => {
+    const last = library.lastEpisode(props.item.id);
+    return last && last.season === props.position.season ? last : undefined;
+  };
+  /** Numéro affiché dans le cercle : l'épisode en cours, sinon le premier. */
+  const currentEpisodeNumber = () => {
+    const index = inProgress()?.episode ?? 0;
+    return episodes()[index]?.episode_num ?? index + 1;
+  };
   const rating = () => {
     const value = Number(info()?.rating ?? props.item.rating);
     return value > 0 ? value.toFixed(1) : undefined;
@@ -222,10 +232,10 @@ export function SeriesDetail(props: SeriesDetailProps) {
             }
           >
             <div class="series__count">
-              <span class="series__count-number">{episodes().length}</span>
+              <span class="series__count-number">{currentEpisodeNumber()}</span>
               <div class="series__count-text">
-                <strong>Épisode{episodes().length > 1 ? 's' : ''}</strong>
-                <small>Saison {season()?.number}</small>
+                <strong>{inProgress() ? 'Épisode en cours' : 'Épisode'}</strong>
+                <small>{`Saison ${season()?.number} · ${episodes().length} épisode${episodes().length > 1 ? 's' : ''}`}</small>
               </div>
               <span class="series__count-line" />
             </div>
