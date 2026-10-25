@@ -151,9 +151,30 @@ const PROBE_BYTES = 512 * 1024;
  */
 export async function probeMkvTracks(fetchUrl: string): Promise<MediaTrack[]> {
   const response = await fetch(fetchUrl, { headers: { Range: `bytes=0-${PROBE_BYTES - 1}` } });
-  if (!response.ok) return [];
-  const buffer = await response.arrayBuffer();
-  return parseMkvTracks(new Uint8Array(buffer, 0, Math.min(buffer.byteLength, PROBE_BYTES)));
+  if (!response.ok || !response.body) return [];
+  return parseMkvTracks(await readStart(response.body, PROBE_BYTES));
+}
+
+/**
+ * Les `limit` premiers octets d'une réponse, puis coupure : un serveur qui
+ * ignore la requête Range enverrait sinon le film entier.
+ */
+export async function readStart(body: ReadableStream<Uint8Array>, limit: number) {
+  const reader = body.getReader();
+  const bytes = new Uint8Array(limit);
+  let length = 0;
+  try {
+    while (length < limit) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = value.subarray(0, limit - length);
+      bytes.set(chunk, length);
+      length += chunk.length;
+    }
+  } finally {
+    reader.cancel().catch(() => undefined);
+  }
+  return bytes.subarray(0, length);
 }
 
 /** Pistes trouvées dans le début d'un fichier MKV (vide si non trouvées). */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeTrack, parseMkvTracks, type MediaTrack } from './mkv';
+import { describeTrack, parseMkvTracks, readStart, type MediaTrack } from './mkv';
 
 /** Construit un élément EBML (taille < 127 octets, codée sur 1 octet). */
 function el(id: number[], ...content: (number[] | string)[]): number[] {
@@ -80,5 +80,28 @@ describe('describeTrack', () => {
     [{}, 'Langue inconnue'],
   ])('%o → %s', (extra, label) => {
     expect(describeTrack({ ...base, ...extra })).toBe(label);
+  });
+});
+
+describe('readStart', () => {
+  it('lit les premiers octets puis coupe la réponse', async () => {
+    let cancelled = false;
+    let sent = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        sent += 1;
+        controller.enqueue(new Uint8Array(4).fill(sent));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    expect([...(await readStart(body, 6))]).toEqual([1, 1, 1, 1, 2, 2]);
+    expect(cancelled).toBe(true);
+  });
+
+  it('s’arrête à la fin d’une réponse courte', async () => {
+    const body = new Response(new Uint8Array([7, 8])).body!;
+    expect([...(await readStart(body, 10))]).toEqual([7, 8]);
   });
 });

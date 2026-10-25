@@ -25,6 +25,12 @@ type VideoWithAudioTracks = HTMLVideoElement & {
 
 /** Secondes de vidéo à avoir en réserve avant de lancer la lecture d'un flux live. */
 const CUSHION_SECONDS = 2.5;
+/**
+ * Pause entre la fermeture d'un flux et l'ouverture du suivant : les
+ * abonnements à une seule connexion ne doivent jamais en voir deux à la fois.
+ */
+const SWITCH_GAP_MS = 400;
+const isMkv = (url: string) => /\.(mkv|webm)(\?|$)/i.test(url);
 
 /**
  * Lecteur navigateur : hls.js pour le HLS, mpegts.js pour le MPEG-TS brut
@@ -63,11 +69,21 @@ export class WebPlayer implements Player {
   }
 
   play(url: string): void {
+    const wasStreaming = this.state !== 'idle';
     this.stop();
     this.url = url;
     const generation = ++this.generation;
     this.setState('loading');
+    if (wasStreaming) {
+      setTimeout(() => {
+        if (generation === this.generation) this.open(url, generation);
+      }, SWITCH_GAP_MS);
+    } else {
+      this.open(url, generation);
+    }
+  }
 
+  private open(url: string, generation: number) {
     const fail = (message: string) => {
       if (generation === this.generation) this.setState('error', message);
     };
@@ -81,10 +97,17 @@ export class WebPlayer implements Player {
       case 'mpegts':
         this.playMpegts(url, generation, fail).catch(onLoadError);
         break;
-      case 'native':
-        this.video.src = proxify(url);
-        this.video.play().catch((error: Error) => fail(error.message));
+      case 'native': {
+        const start = () => {
+          if (generation !== this.generation) return;
+          this.video.src = proxify(url);
+          this.video.play().catch((error: Error) => fail(error.message));
+        };
+        // MKV : pistes lues dans l'en-tête avant de lancer la vidéo, pas en même temps.
+        if (isMkv(url)) void this.probe(url).then(start);
+        else start();
         break;
+      }
     }
   }
 
@@ -166,6 +189,13 @@ export class WebPlayer implements Player {
     video.addEventListener('waiting', onWaiting);
   }
 
+  private probe(url: string): Promise<MediaTrack[]> {
+    if (this.probed?.url !== url) {
+      this.probed = { url, tracks: probeMkvTracks(proxify(url)).catch(() => []) };
+    }
+    return this.probed.tracks;
+  }
+
   stop(): void {
     this.generation++;
     this.hls?.destroy();
@@ -241,14 +271,8 @@ export class WebPlayer implements Player {
     }
 
     // Fichier MKV : on lit les pistes dans son en-tête.
-    if (!this.url || !/\.(mkv|webm)(\?|$)/i.test(this.url)) {
-      return { options: [], switchable: false };
-    }
-    const url = this.url;
-    if (this.probed?.url !== url) {
-      this.probed = { url, tracks: probeMkvTracks(proxify(url)).catch(() => []) };
-    }
-    const tracks = await this.probed.tracks;
+    if (!this.url || !isMkv(this.url)) return { options: [], switchable: false };
+    const tracks = await this.probe(this.url);
     const browserAudio = (this.video as VideoWithAudioTracks).audioTracks;
     const audio = tracks.filter((track) => track.kind === 'audio');
     const defaultAudio = audio.find((track) => track.isDefault) ?? audio[0];
