@@ -103,10 +103,13 @@ test('YoumboFlix : rangées par genre et fiche film', async ({ page }) => {
   await expect(page.locator('.detail__title')).toBeVisible();
   await expect(page.locator('.detail .menu__label')).toContainText(['Lecture', '♡ Ma liste']);
 
-  // Ajout à Ma liste, puis retour : la rangée « Ma liste » apparaît en tête.
+  // Ajout à Ma liste, puis retour : la sélection reste sur la rangée du film
+  // (toujours la première affichée), et « Ma liste » apparaît juste au-dessus.
   await press(page, 'ArrowRight', 'Enter');
   await expect(page.locator('.detail .menu__label').nth(1)).toHaveText('♥ Dans ma liste');
   await press(page, 'Escape');
+  await expect(rowTitles(page).first()).toHaveText('Récemment ajoutés');
+  await press(page, 'ArrowUp');
   await expect(rowTitles(page).first()).toHaveText('Ma liste');
 });
 

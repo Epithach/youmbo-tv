@@ -19,8 +19,8 @@ import { clamp, useRemote } from '../../ui/remote';
 import { animeOpenings } from './DetailMusic';
 import { Hero, HERO_BUTTONS } from './Hero';
 
-/** Rangées rendues autour de la sélection (au-dessus / en dessous). */
-const ROWS_BEFORE = 1;
+/** Rangées rendues autour de la sélection : elle reste la première sous la bannière. */
+const ROWS_BEFORE = 0;
 const ROWS_AFTER = 3;
 /** Affiches rendues dans une rangée autour de la sélection. */
 const POSTERS_BEFORE = 2;
