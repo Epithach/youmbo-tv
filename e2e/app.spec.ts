@@ -39,47 +39,79 @@ test('télévision : chaînes du pays, programme en cours et favoris', async ({ 
   await onboard(page);
   await press(page, 'Enter');
 
-  const channels = page.locator('.column--channels .row__label');
-  await expect(channels.first()).toHaveText('FR - Chaîne Une');
+  // Barre des chaînes en bas, regroupées par marque.
+  const tiles = page.locator('.tv-tile__caption');
+  await expect(tiles.first()).toContainText('Chaîne Une');
   // Le direct se lance sans appuyer sur OK, puis suit la sélection.
-  const rows = page.locator('.column--channels .list__row');
-  await expect(rows.first().locator('.row__badge')).toBeVisible();
-  await press(page, 'ArrowDown');
-  await expect(rows.nth(1).locator('.row__badge')).toBeVisible();
-  await press(page, 'ArrowUp');
-  // Le faux titre de section « ##### FRANCE ##### » est filtré.
-  await expect(page.locator('.column--channels')).not.toContainText('#####');
-  // Pas de chaînes d'autres pays.
-  await expect(page.locator('.column--channels')).not.toContainText('UK -');
-
-  await expect(page.locator('.channel-info')).toContainText('Ensuite');
-
+  const playing = page.locator('.tv-tile--playing .tv-tile__caption');
+  await expect(playing).toContainText('Chaîne Une');
   await press(page, 'ArrowRight');
-  await expect(page.locator('.column--groups')).toContainText('★ Favoris');
-  await expect(page.locator('.channel-info')).toContainText('Favori');
+  await expect(playing).toContainText('Chaîne Deux');
+  // Le faux titre de section « ##### FRANCE ##### » est filtré, et pas d'autres pays.
+  await expect(page.locator('.tv-brands')).not.toContainText('#####');
+  await expect(page.locator('.tv-brands')).not.toContainText('Channel One');
+
+  // Bulle au-dessus de la chaîne : émission en cours et suivante.
+  await expect(page.locator('.tv-bubble')).toContainText('Ensuite');
+
+  // OK : menu de la chaîne ; → l'ajoute aux favoris, qui apparaissent dans les catégories.
+  await press(page, 'Enter');
+  await expect(page.locator('.tv-menu__item--selected')).toContainText('FR - Chaîne Deux');
+  await press(page, 'ArrowRight');
+  await expect(page.locator('.tv-menu__star--on')).toHaveCount(1);
+  await press(page, 'ArrowLeft');
+  await expect(page.locator('.tv-groups')).toContainText('★ Favoris');
+});
+
+test('télévision : marques regroupées, menu des chaînes', async ({ page }) => {
+  await onboard(page);
+  await press(page, 'Enter');
+  const dazn = page.locator('.tv-tile', { hasText: 'DAZN' });
+  await expect(dazn.locator('.tv-tile__count')).toHaveText('3');
+
+  // Catégorie « FRANCE SPORTS » : ↑ vers les catégories, puis → jusqu'à elle.
+  await press(page, 'ArrowUp', 'ArrowRight', 'ArrowRight', 'Enter');
+  await expect(page.locator('.tv-groups__item--selected')).toContainText('SPORTS');
+  await expect(page.locator('.tv-tile__caption').first()).toContainText('Sport Direct');
+
+  // DAZN : OK ouvre ses trois chaînes ; OK sur DAZN 2 la lance et efface les barres.
+  await press(page, 'ArrowRight', 'ArrowRight', 'ArrowRight', 'Enter');
+  await expect(page.locator('.tv-menu__name')).toHaveText([
+    'FR - DAZN 1',
+    'FR - DAZN 2',
+    'FR - DAZN 3',
+  ]);
+  await press(page, 'ArrowDown', 'Enter');
+  await expect(page.locator('.tv--chrome')).toHaveCount(0);
+  await expect(page.locator('.zap-banner')).toContainText('FR - DAZN 2');
 });
 
 test('télévision : numéros de chaînes, zapping et bandeau', async ({ page }) => {
   await onboard(page);
   await press(page, 'Enter');
-  await expect(page.locator('.column--channels .row__number').first()).toHaveText('1');
+  await expect(page.locator('.tv-tile').first()).toBeVisible();
 
   // Taper « 4 » : la chaîne n°4 se lance.
   await press(page, '4');
   await expect(page.locator('.channel-number')).toHaveText('4');
-  await expect(page.locator('.column--channels .list__row--selected')).toContainText('Ciné Club');
+  await expect(page.locator('.tv-tile--selected')).toContainText('Ciné Club');
+  await expect(page.locator('.tv-tile--playing')).toContainText('Ciné Club');
 
-  // OK sur la chaîne qui joue : plein écran ; ↓ zappe et affiche le bandeau.
-  await press(page, 'Enter');
-  await expect(page.locator('.tv--fullscreen')).toBeVisible();
+  // ↓ efface les barres ; ↓ encore zappe et affiche le bandeau.
+  await press(page, 'ArrowDown');
+  await expect(page.locator('.tv--chrome')).toHaveCount(0);
   await press(page, 'ArrowDown');
   await expect(page.locator('.zap-banner')).toContainText('FR - Jeunesse');
   await expect(page.locator('.zap-banner__number')).toHaveText('5');
+  // Une autre touche fait revenir les barres.
+  await press(page, 'ArrowLeft');
+  await expect(page.locator('.tv--chrome')).toBeVisible();
 });
 
 test('guide TV : grille, direct et replay', async ({ page }) => {
   await onboard(page);
-  await press(page, 'Enter', 'ArrowLeft', 'ArrowUp', 'ArrowUp', 'ArrowDown', 'Enter');
+  // ↑ vers les catégories, ← « Guide TV », OK.
+  await press(page, 'Enter', 'ArrowUp', 'ArrowLeft', 'Enter');
   await expect(page.getByRole('heading', { name: 'Guide TV' })).toBeVisible();
   await expect(page.locator('.guide__details-status')).toContainText('En direct');
 
@@ -225,8 +257,8 @@ test('YoumboFlix : séries par genre, saisons et épisodes', async ({ page }) =>
 
 test('recherche dans la TV : chaînes seulement', async ({ page }) => {
   await onboard(page);
-  // Catégories : Recherche, Guide TV, Toutes les chaînes… → deux fois ↑.
-  await press(page, 'Enter', 'ArrowLeft', 'ArrowUp', 'ArrowUp', 'Enter');
+  // Catégories : Recherche, Guide TV, Toutes les chaînes… → ↑ puis deux fois ←.
+  await press(page, 'Enter', 'ArrowUp', 'ArrowLeft', 'ArrowLeft', 'Enter');
   await expect(page.getByRole('heading', { name: 'Rechercher une chaîne' })).toBeVisible();
 
   await page.locator('.search__input').fill('chaine une');
@@ -238,7 +270,7 @@ test('recherche dans la TV : chaînes seulement', async ({ page }) => {
   await page.locator('.search__input').fill('chaine une');
   await expect(page.locator('.list__row').first()).toContainText('Chaîne Une');
   await press(page, 'ArrowDown', 'Enter');
-  await expect(page.locator('.column--channels .row__badge')).toBeVisible();
+  await expect(page.locator('.tv-tile--playing')).toContainText('Chaîne Une');
 });
 
 test('recherche dans YoumboFlix : films et séries seulement', async ({ page }) => {
@@ -266,8 +298,9 @@ test('bandeau de gauche : ← tout à gauche, Retour referme, OK change de parti
 }) => {
   await onboard(page);
   await press(page, 'Enter');
-  // TV : ← vers les catégories, puis encore ← : le bandeau s'ouvre sur Télévision.
-  await press(page, 'ArrowLeft', 'ArrowLeft');
+  // TV : ← sur la première chaîne : le bandeau s'ouvre sur Télévision.
+  await expect(page.locator('.tv-tile').first()).toBeVisible();
+  await press(page, 'ArrowLeft');
   const nav = page.locator('.side-nav');
   await expect(nav).toHaveClass(/side-nav--open/);
   await expect(nav.locator('.side-nav__item--selected')).toHaveAttribute(
@@ -278,7 +311,7 @@ test('bandeau de gauche : ← tout à gauche, Retour referme, OK change de parti
   // Retour referme le bandeau sans quitter la TV.
   await press(page, 'Escape');
   await expect(nav).not.toHaveClass(/side-nav--open/);
-  await expect(page.locator('.column--groups')).toBeVisible();
+  await expect(page.locator('.tv-brands')).toBeVisible();
 
   // ↓ ↓ ↓ Paramètres, OK.
   await press(page, 'ArrowLeft', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'Enter');
@@ -315,9 +348,7 @@ test('paramètres : changer de pays', async ({ page }) => {
   await expect(page.locator('.menu__detail').nth(1)).toHaveText('Belgique');
 
   await press(page, 'Escape', 'Enter');
-  await expect(page.locator('.column--channels .row__label').first()).toHaveText(
-    'BE - La Une Belge',
-  );
+  await expect(page.locator('.tv-tile__caption').first()).toContainText('La Une Belge');
 });
 
 test('YoumboFlix : ↓ garde la même colonne à l’écran', async ({ page }) => {
