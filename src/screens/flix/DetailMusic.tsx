@@ -3,7 +3,7 @@ import { findOpenings, looksLikeAnime, pickOpening, type Opening } from '../../c
 import { loadCategories, type CatalogItem } from '../../core/catalog';
 import { loadVolume } from '../../core/storage';
 import type { XtreamCredentials } from '../../core/xtream';
-import { YoutubeBackground } from '../../ui/YoutubeBackground';
+import { TrailerBackground } from '../../ui/TrailerBackground';
 
 /** Attente avant la bande-annonce : pas pour une fiche ouverte puis quittée aussitôt. */
 const START_DELAY_MS = 1000;
@@ -98,7 +98,7 @@ export function DetailMusic(props: DetailMusicProps) {
     <>
       <Show when={trailer()}>
         {(id) => (
-          <YoutubeBackground
+          <TrailerBackground
             id={id()}
             class="detail__music-video"
             title="Bande-annonce (musique de fond)"

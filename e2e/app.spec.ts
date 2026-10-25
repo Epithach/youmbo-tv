@@ -7,6 +7,12 @@ import { expect, test, type Page } from '@playwright/test';
  * codecs H.264) : on teste l'interface et les données.
  */
 
+// Invidious (bandes-annonces) est bloqué : les tests ne dépendent pas d'un serveur
+// public lent ; l'app se replie alors sur le lecteur YouTube, ce que vérifient les tests.
+test.beforeEach(async ({ page }) => {
+  await page.route('https://yt.chocolatemoo53.com/**', (route) => route.abort());
+});
+
 const press = (page: Page, ...keys: string[]) =>
   keys.reduce((done, key) => done.then(() => page.keyboard.press(key)), Promise.resolve());
 
