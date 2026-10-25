@@ -51,3 +51,12 @@ export function displayEpisodeTitle(episode: SeriesEpisode): string {
       : '';
   return title || `Épisode ${episode.episode_num}`;
 }
+
+/** Durée « HH:MM:SS » en minutes (arrondies), si elle est connue. */
+export function durationMinutes(duration: string | undefined): number | undefined {
+  const parts = (duration ?? '').split(':').map(Number);
+  if (parts.length < 2 || parts.some((part) => Number.isNaN(part))) return undefined;
+  const [hours, minutes, seconds = 0] = parts.length === 2 ? [0, ...parts] : parts;
+  const total = Math.round(hours * 60 + minutes + seconds / 60);
+  return total > 0 ? total : undefined;
+}

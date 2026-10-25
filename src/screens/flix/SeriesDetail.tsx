@@ -176,23 +176,23 @@ export function SeriesDetail(props: SeriesDetailProps) {
   });
 
   return (
-    <div class="detail series" classList={{ 'series--similar': zone() === 'similar' }}>
+    <div class="detail showcase" classList={{ 'showcase--similar': zone() === 'similar' }}>
       <Show when={resizePoster(backdrop(), 1280)}>
-        {(src) => <img class="series__backdrop" src={src()} alt="" />}
+        {(src) => <img class="showcase__backdrop" src={src()} alt="" />}
       </Show>
-      <div class="series__shade" />
+      <div class="showcase__shade" />
 
-      <div class="series__stage">
-        <section class="series__main">
+      <div class="showcase__stage">
+        <section class="showcase__main">
           <Show when={rating()}>
-            <p class="series__rating">
+            <p class="showcase__rating">
               {rating()} <span>/ 10</span>
             </p>
           </Show>
-          <h1 class="series__title">{bigTitle()}</h1>
-          <Show when={!details.loading} fallback={<p class="series__plot">Chargement…</p>}>
-            <p class="series__plot">
-              <svg class="series__plot-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <h1 class="showcase__title">{bigTitle()}</h1>
+          <Show when={!details.loading} fallback={<p class="showcase__plot">Chargement…</p>}>
+            <p class="showcase__plot">
+              <svg class="showcase__plot-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="12" cy="12" r="10.5" />
                 <path d="M10 8.5v7l5.5-3.5z" />
               </svg>
@@ -222,7 +222,7 @@ export function SeriesDetail(props: SeriesDetailProps) {
           </div>
         </section>
 
-        <section class="series__side">
+        <section class="showcase__side">
           <Show
             when={seasons().length > 0}
             fallback={
@@ -231,13 +231,13 @@ export function SeriesDetail(props: SeriesDetailProps) {
               </Show>
             }
           >
-            <div class="series__count">
-              <span class="series__count-number">{currentEpisodeNumber()}</span>
-              <div class="series__count-text">
+            <div class="showcase__count">
+              <span class="showcase__count-number">{currentEpisodeNumber()}</span>
+              <div class="showcase__count-text">
                 <strong>{inProgress() ? 'Épisode en cours' : 'Épisode'}</strong>
                 <small>{`Saison ${season()?.number} · ${episodes().length} épisode${episodes().length > 1 ? 's' : ''}`}</small>
               </div>
-              <span class="series__count-line" />
+              <span class="showcase__count-line" />
             </div>
             <nav class="seasons" classList={{ 'seasons--active': zone() === 'seasons' }}>
               <For each={seasons()}>
@@ -274,7 +274,7 @@ export function SeriesDetail(props: SeriesDetailProps) {
           </Show>
         </section>
 
-        <div class="series__similar">
+        <div class="showcase__similar">
           <PosterStrip
             title="Séries similaires"
             items={similar()}
