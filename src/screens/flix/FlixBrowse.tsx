@@ -171,8 +171,27 @@ export function FlixBrowse(props: FlixBrowseProps) {
   });
 
   // Actions communes à la télécommande et à la souris.
-  const moveRow = (delta: number) =>
-    setRow(clamp(row() + delta, HERO_ROW, catalogRows().length - 1));
+  /**
+   * Change de rangée en restant dans la même colonne à l'écran : l'affiche
+   * sélectionnée est toujours dans les POSTERS_BEFORE premières places, ou à
+   * la suivante une fois la rangée décalée.
+   */
+  const moveRow = (delta: number) => {
+    const target = clamp(row() + delta, HERO_ROW, catalogRows().length - 1);
+    const from = catalogRows()[row()];
+    const to = catalogRows()[target];
+    if (!from || !to || target === row()) return setRow(target);
+    const place = Math.min(column(from), POSTERS_BEFORE);
+    const wanted = place < POSTERS_BEFORE ? place : Math.max(column(to), POSTERS_BEFORE);
+    const count = itemsOf(to).length;
+    update({
+      rows: { ...props.position.rows, [kind()]: target },
+      columns: {
+        ...props.position.columns,
+        [rowKey(to)]: count > 0 ? Math.min(wanted, count - 1) : wanted,
+      },
+    });
+  };
   const setColumn = (catalogRow: CatalogRow, value: number) => {
     const next = clamp(value, 0, itemsOf(catalogRow).length - 1);
     update({ columns: { ...props.position.columns, [rowKey(catalogRow)]: next } });
@@ -198,7 +217,7 @@ export function FlixBrowse(props: FlixBrowseProps) {
 
     switch (key) {
       case 'up':
-        return setRow(row() - 1);
+        return moveRow(-1);
       case 'down':
         return moveRow(1);
       case 'left':

@@ -306,3 +306,20 @@ test('paramètres : changer de pays', async ({ page }) => {
     'BE - La Une Belge',
   );
 });
+
+test('YoumboFlix : ↓ garde la même colonne à l’écran', async ({ page }) => {
+  await onboard(page);
+  await press(page, 'ArrowRight', 'Enter');
+  await expect(rowTitles(page).first()).toBeVisible();
+  await activePosters(page);
+
+  const selectedLeft = async () => (await page.locator('.poster--selected').boundingBox())?.x ?? -1;
+  await press(page, 'ArrowRight', 'ArrowRight');
+  const left = await selectedLeft();
+  expect(left).toBeGreaterThan(0);
+
+  await press(page, 'ArrowDown');
+  await expect(rowTitles(page).first()).toHaveText('Action & Aventure');
+  await activePosters(page);
+  expect(await selectedLeft()).toBeCloseTo(left, 0);
+});
