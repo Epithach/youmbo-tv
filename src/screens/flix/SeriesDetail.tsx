@@ -12,15 +12,19 @@ import { library, progressKey } from '../../core/library';
 import type { XtreamCredentials } from '../../core/xtream';
 import { Marquee } from '../../ui/Marquee';
 import { clamp, useRemote } from '../../ui/remote';
-import { WindowedList } from '../../ui/WindowedList';
 import { DetailMusic } from './DetailMusic';
 import { Badges, PosterStrip, Trailer } from './FlixParts';
 import { formatTime } from './PlayerControls';
 
 /** Séries similaires affichées au plus. */
 const SIMILAR_LIMIT = 20;
+/** Vignettes d'épisodes rendues : une avant la sélection, la suite déborde à droite. */
+const EPISODES_BEFORE = 1;
+const EPISODES_AFTER = 5;
 
-type Zone = 'actions' | 'episodes' | 'similar';
+type Zone = 'actions' | 'seasons' | 'episodes' | 'similar';
+/** Zones de haut en bas, parcourues avec ↑ ↓. */
+const ZONES: Zone[] = ['actions', 'seasons', 'episodes', 'similar'];
 
 /** Saison et épisode sélectionnés (indices), conservés pendant la lecture. */
 export interface SeriesPosition {
@@ -41,9 +45,10 @@ interface SeriesDetailProps {
 }
 
 /**
- * Fiche d'une série : ← → changent de saison, ↑ ↓ parcourent les épisodes.
- * ↑ depuis le premier épisode : boutons (Ma liste, Bande-annonce) ;
- * ↓ depuis le dernier : séries similaires.
+ * Fiche d'une série, en grand format : image plein écran, note et titre en
+ * grand à gauche avec le résumé, épisodes de la saison en vignettes à droite.
+ * ↑ ↓ passent des boutons aux saisons, aux épisodes puis aux séries
+ * similaires ; ← → se déplacent dans la zone choisie.
  */
 export function SeriesDetail(props: SeriesDetailProps) {
   const [details] = createResource(() => loadSeriesDetails(props.credentials, props.item.id));
@@ -54,12 +59,20 @@ export function SeriesDetail(props: SeriesDetailProps) {
 
   const info = () => details()?.info;
   const title = () => displayTitle(info()?.name || props.item.name);
+  /** Titre affiché en grand : sans l'année entre parenthèses, déjà dans les infos. */
+  const bigTitle = () => title().replace(/\s*\(\d{4}\)\s*$/, '');
   const season = () => seasons()[props.position.season];
   const episodes = () => season()?.episodes ?? [];
+  const rating = () => {
+    const value = Number(info()?.rating ?? props.item.rating);
+    return value > 0 ? value.toFixed(1) : undefined;
+  };
   const seasonsText = () => {
     const count = seasons().length;
     return count > 0 ? `${count} saison${count > 1 ? 's' : ''}` : undefined;
   };
+  const backdrop = () =>
+    firstImage(info()?.backdrop_path) || props.item.backdrop || info()?.cover || props.item.poster;
 
   // Séries de la même catégorie, celles qui partagent un genre d'abord.
   const [similarSource] = createResource(() =>
@@ -91,146 +104,167 @@ export function SeriesDetail(props: SeriesDetailProps) {
       : []),
   ];
 
-  const resumeAt = (episode: SeriesEpisode) =>
-    library.resumePosition(progressKey('episode', episode.id));
+  const episodeWindow = createMemo(() => {
+    const start = Math.max(0, props.position.episode - EPISODES_BEFORE);
+    return episodes()
+      .slice(start, start + EPISODES_BEFORE + EPISODES_AFTER + 1)
+      .map((episode, offset) => ({ episode, index: start + offset }));
+  });
+
+  /** Zones présentes : pas de saisons ni d'épisodes sans épisode, pas de similaires vides. */
+  const zones = () =>
+    ZONES.filter((z) => {
+      if (z === 'seasons' || z === 'episodes') return seasons().length > 0;
+      if (z === 'similar') return similar().length > 0;
+      return true;
+    });
+  const moveZone = (delta: number) => {
+    const list = zones();
+    const next = list[clamp(list.indexOf(zone()) + delta, 0, list.length - 1)];
+    if (next) setZone(next);
+  };
+
+  const setEpisode = (episode: number) =>
+    props.onPositionChange({
+      ...props.position,
+      episode: clamp(episode, 0, episodes().length - 1),
+    });
+  const setSeason = (index: number) => {
+    const next = clamp(index, 0, seasons().length - 1);
+    if (next !== props.position.season) props.onPositionChange({ season: next, episode: 0 });
+  };
 
   useRemote((key) => {
     if (trailer()) return; // La bande-annonce a sa propre télécommande.
-    const { season: s, episode: e } = props.position;
     if (key === 'back') return props.onBack();
+    if (key === 'up' || key === 'down') return moveZone(key === 'up' ? -1 : 1);
+    const delta = key === 'left' ? -1 : key === 'right' ? 1 : 0;
 
-    if (zone() === 'actions') {
-      if (key === 'left' || key === 'right') {
-        setAction(clamp(action() + (key === 'left' ? -1 : 1), 0, actions().length - 1));
-      } else if (key === 'ok') actions()[action()]?.press();
-      else if (key === 'down') setZone('episodes');
-      return;
-    }
-    if (zone() === 'similar') {
-      if (key === 'left' || key === 'right') {
-        setSimilarIndex(clamp(similarIndex() + (key === 'left' ? -1 : 1), 0, similar().length - 1));
-      } else if (key === 'ok') {
-        const item = similar()[similarIndex()];
-        if (item) props.onOpen(item);
-      } else if (key === 'up') setZone('episodes');
-      return;
-    }
-
-    if (key === 'up' && e === 0) return setZone('actions');
-    if (key === 'down' && e === episodes().length - 1 && similar().length > 0) {
-      return setZone('similar');
-    }
-    switch (key) {
-      case 'left':
-      case 'right': {
-        const next = clamp(s + (key === 'left' ? -1 : 1), 0, seasons().length - 1);
-        if (next !== s) props.onPositionChange({ season: next, episode: 0 });
+    switch (zone()) {
+      case 'actions':
+        if (delta) setAction(clamp(action() + delta, 0, actions().length - 1));
+        else if (key === 'ok') actions()[action()]?.press();
         return;
-      }
-      case 'up':
-      case 'down':
-        return props.onPositionChange({
-          season: s,
-          episode: clamp(e + (key === 'up' ? -1 : 1), 0, episodes().length - 1),
-        });
-      case 'ok':
-        if (episodes()[e]) props.onPlay(episodes(), e, title());
+      case 'seasons':
+        if (delta) setSeason(props.position.season + delta);
+        else if (key === 'ok') setZone('episodes');
+        return;
+      case 'episodes':
+        if (delta) setEpisode(props.position.episode + delta);
+        else if (key === 'ok' && episodes()[props.position.episode]) {
+          props.onPlay(episodes(), props.position.episode, title());
+        }
+        return;
+      case 'similar':
+        if (delta) setSimilarIndex(clamp(similarIndex() + delta, 0, similar().length - 1));
+        else if (key === 'ok') {
+          const item = similar()[similarIndex()];
+          if (item) props.onOpen(item);
+        }
         return;
     }
   });
 
   return (
-    <div class="detail">
-      <Show
-        when={resizePoster(
-          firstImage(info()?.backdrop_path) ||
-            props.item.backdrop ||
-            info()?.cover ||
-            props.item.poster,
-          1280,
-        )}
-      >
-        {(src) => <img class="detail__backdrop" src={src()} alt="" />}
+    <div class="detail series" classList={{ 'series--similar': zone() === 'similar' }}>
+      <Show when={resizePoster(backdrop(), 1280)}>
+        {(src) => <img class="series__backdrop" src={src()} alt="" />}
       </Show>
-      <div class="detail__content">
-        <Show when={resizePoster(info()?.cover || props.item.poster, 342)}>
-          {(src) => <img class="detail__poster" src={src()} alt="" />}
-        </Show>
-        <div class="detail__text">
-          <h1 class="detail__title">{title()}</h1>
+      <div class="series__shade" />
+
+      <div class="series__stage">
+        <section class="series__main">
+          <Show when={rating()}>
+            <p class="series__rating">
+              {rating()} <span>/ 10</span>
+            </p>
+          </Show>
+          <h1 class="series__title">{bigTitle()}</h1>
+          <Show when={!details.loading} fallback={<p class="series__plot">Chargement…</p>}>
+            <p class="series__plot">
+              <svg class="series__plot-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="10.5" />
+                <path d="M10 8.5v7l5.5-3.5z" />
+              </svg>
+              <span>{info()?.plot || 'Pas de résumé disponible.'}</span>
+            </p>
+          </Show>
           <Badges
-            rating={info()?.rating ?? props.item.rating}
             age={info()?.age}
             year={(info()?.releaseDate || info()?.release_date)?.slice(0, 4)}
             genre={info()?.genre}
             extra={seasonsText()}
           />
-          <Show when={!details.loading} fallback={<p class="detail__plot">Chargement…</p>}>
-            <p class="detail__plot detail__plot--short">
-              {info()?.plot || 'Pas de résumé disponible.'}
-            </p>
-            <Show
-              when={seasons().length > 0}
-              fallback={<p class="detail__credits">Aucun épisode disponible.</p>}
-            >
-              <div class="detail__actions">
-                <For each={actions()}>
-                  {(entry, index) => (
-                    <span
-                      class="controls__button"
-                      classList={{
-                        'controls__button--focused': zone() === 'actions' && index() === action(),
-                      }}
-                      onClick={() => entry.press()}
-                    >
-                      {entry.label}
-                    </span>
-                  )}
-                </For>
+          <div class="detail__actions">
+            <For each={actions()}>
+              {(entry, index) => (
+                <span
+                  class="controls__button"
+                  classList={{
+                    'controls__button--focused': zone() === 'actions' && index() === action(),
+                  }}
+                  onClick={() => entry.press()}
+                >
+                  {entry.label}
+                </span>
+              )}
+            </For>
+          </div>
+        </section>
+
+        <section class="series__side">
+          <Show
+            when={seasons().length > 0}
+            fallback={
+              <Show when={!details.loading}>
+                <p class="detail__credits">Aucun épisode disponible.</p>
+              </Show>
+            }
+          >
+            <div class="series__count">
+              <span class="series__count-number">{episodes().length}</span>
+              <div class="series__count-text">
+                <strong>Épisode{episodes().length > 1 ? 's' : ''}</strong>
+                <small>Saison {season()?.number}</small>
               </div>
-              <nav class="seasons">
-                <For each={seasons()}>
-                  {(entry, index) => (
-                    <span
-                      class="seasons__item"
-                      classList={{ 'seasons__item--selected': index() === props.position.season }}
-                      onClick={() => props.onPositionChange({ season: index(), episode: 0 })}
-                    >
-                      Saison {entry.number}
-                    </span>
-                  )}
-                </For>
-              </nav>
-              <WindowedList
-                items={episodes()}
-                selected={props.position.episode}
-                active={zone() === 'episodes'}
-                visibleRows={6}
-                onSelect={(index) => props.onPositionChange({ ...props.position, episode: index })}
-                onActivate={(index) => props.onPlay(episodes(), index, title())}
-              >
-                {(episode, index) => (
-                  <>
-                    <Marquee
-                      class="row__label"
-                      text={`${episode.episode_num}. ${displayEpisodeTitle(episode)}`}
-                      active={index === props.position.episode}
-                    />
-                    <Show
-                      when={resumeAt(episode)}
-                      fallback={
-                        <Show when={episode.info?.duration}>
-                          <span class="row__count">{episode.info?.duration}</span>
-                        </Show>
-                      }
-                    >
-                      {(at) => <span class="row__count">Reprise à {formatTime(at())}</span>}
-                    </Show>
-                  </>
+              <span class="series__count-line" />
+            </div>
+            <nav class="seasons" classList={{ 'seasons--active': zone() === 'seasons' }}>
+              <For each={seasons()}>
+                {(entry, index) => (
+                  <span
+                    class="seasons__item"
+                    classList={{ 'seasons__item--selected': index() === props.position.season }}
+                    onClick={() => setSeason(index())}
+                  >
+                    Saison {entry.number}
+                  </span>
                 )}
-              </WindowedList>
-            </Show>
+              </For>
+            </nav>
+            <div class="episodes">
+              <For each={episodeWindow()}>
+                {({ episode, index }) => (
+                  <EpisodeCard
+                    episode={episode}
+                    season={season()?.number}
+                    fallbackImage={backdrop()}
+                    selected={zone() === 'episodes' && index === props.position.episode}
+                    current={index === props.position.episode}
+                    onClick={() => {
+                      setZone('episodes');
+                      if (index === props.position.episode)
+                        props.onPlay(episodes(), index, title());
+                      else setEpisode(index);
+                    }}
+                  />
+                )}
+              </For>
+            </div>
           </Show>
+        </section>
+
+        <div class="series__similar">
           <PosterStrip
             title="Séries similaires"
             items={similar()}
@@ -240,6 +274,7 @@ export function SeriesDetail(props: SeriesDetailProps) {
           />
         </div>
       </div>
+
       <DetailMusic
         credentials={props.credentials}
         item={props.item}
@@ -251,5 +286,69 @@ export function SeriesDetail(props: SeriesDetailProps) {
         {(id) => <Trailer youtubeId={id()} onClose={() => setTrailer(false)} />}
       </Show>
     </div>
+  );
+}
+
+interface EpisodeCardProps {
+  episode: SeriesEpisode;
+  season: number | undefined;
+  fallbackImage: string | undefined;
+  /** L'épisode a le focus (zone des épisodes active). */
+  selected: boolean;
+  /** L'épisode retenu dans la saison, même sans le focus. */
+  current: boolean;
+  onClick: () => void;
+}
+
+/** Vignette d'épisode : image, « Saison · Épisode », titre et progression. */
+function EpisodeCard(props: EpisodeCardProps) {
+  const key = () => progressKey('episode', props.episode.id);
+  const resumeAt = () => library.resumePosition(key());
+  const ratio = () => library.progressRatio(key());
+  const image = () => resizePoster(props.episode.info?.movie_image || props.fallbackImage, 500);
+  const details = () => {
+    const at = resumeAt();
+    if (at) return `Reprise à ${formatTime(at)}`;
+    return props.episode.info?.duration;
+  };
+  return (
+    <figure
+      class="episode-card"
+      classList={{
+        'episode-card--selected': props.selected,
+        'episode-card--current': props.current,
+      }}
+      onClick={() => props.onClick()}
+    >
+      <div class="episode-card__image">
+        <Show when={image()}>{(src) => <img src={src()} alt="" loading="lazy" />}</Show>
+        <svg class="episode-card__play" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+        <Show when={ratio()}>
+          {(value) => (
+            <div class="episode-card__progress">
+              <div style={{ width: `${Math.round(value() * 100)}%` }} />
+            </div>
+          )}
+        </Show>
+      </div>
+      <figcaption>
+        <small class="episode-card__number">
+          {[
+            props.season ? `Saison ${props.season}` : undefined,
+            `Épisode ${props.episode.episode_num}`,
+            details(),
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </small>
+        <Marquee
+          class="episode-card__title"
+          text={displayEpisodeTitle(props.episode)}
+          active={props.selected}
+        />
+      </figcaption>
+    </figure>
   );
 }

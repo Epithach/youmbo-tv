@@ -1645,3 +1645,297 @@ body {
 .side-nav:hover .side-nav__label {
   opacity: 1;
 }
+
+/* --- Fiche série, grand format --- */
+
+.series {
+  --gold: #e8b45a;
+  background: #050608;
+}
+
+.series__backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Assombrit la gauche (titre, résumé) et le bas (vignettes), au-dessus de la vidéo de fond. */
+.series__shade {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(5, 6, 8, 0.94) 0%,
+      rgba(5, 6, 8, 0.7) 38%,
+      rgba(5, 6, 8, 0.2) 70%,
+      rgba(5, 6, 8, 0.05) 100%
+    ),
+    linear-gradient(0deg, rgba(5, 6, 8, 0.95) 0%, rgba(5, 6, 8, 0) 50%), rgba(5, 6, 8, 0.35);
+}
+
+.series .detail__music-video--ready,
+.series .detail__opening--playing {
+  opacity: 0.75;
+}
+
+/* Tout le contenu ; il remonte pour laisser voir les séries similaires. */
+.series__stage {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  transition: transform 0.35s ease;
+}
+
+.series--similar .series__stage {
+  transform: translateY(-220px);
+}
+
+.series__main {
+  position: absolute;
+  top: 230px;
+  left: 120px;
+  width: 44%;
+}
+
+.series__rating {
+  margin: 0 0 8px;
+  color: var(--gold);
+  font-size: 34px;
+  font-weight: 600;
+}
+
+.series__rating span {
+  font-size: 24px;
+  opacity: 0.8;
+}
+
+.series__title {
+  display: -webkit-box;
+  margin: 0 0 32px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  font-size: 100px;
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -1px;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+}
+
+.series__plot {
+  display: flex;
+  align-items: flex-start;
+  max-width: 780px;
+  margin: 0;
+  color: rgba(232, 236, 244, 0.88);
+  font-size: 22px;
+  line-height: 1.5;
+}
+
+.series__plot span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.series__plot-icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  margin: 0 18px 0 0;
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 1.2;
+}
+
+.series__plot-icon path {
+  fill: var(--gold);
+  stroke: none;
+}
+
+.series .badges {
+  margin: 24px 0 8px;
+}
+
+.series__side {
+  position: absolute;
+  top: 400px;
+  left: 54%;
+  right: 0;
+  overflow: hidden;
+}
+
+.series__count {
+  display: flex;
+  align-items: center;
+}
+
+.series__count-number {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  margin-right: 20px;
+  border: 2px solid var(--gold);
+  border-radius: 50%;
+  color: var(--gold);
+  font-size: 38px;
+  font-weight: 600;
+}
+
+.series__count-text,
+.series .seasons,
+.episode-card figcaption {
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+}
+
+.series__count-text strong {
+  display: block;
+  font-size: 32px;
+  font-style: italic;
+  font-weight: 700;
+}
+
+.series__count-text small {
+  color: var(--text-muted);
+  font-size: 18px;
+}
+
+.series__count-line {
+  flex: 1;
+  height: 1px;
+  margin-left: 32px;
+  background: rgba(232, 180, 90, 0.6);
+}
+
+.series .seasons {
+  margin: 28px 0 20px;
+}
+
+.series .seasons__item {
+  background: rgba(22, 26, 34, 0.75);
+}
+
+.series .seasons__item--selected {
+  background: rgba(232, 236, 244, 0.92);
+  color: #0d0f14;
+  text-shadow: none;
+}
+
+.series .seasons--active .seasons__item--selected {
+  background: var(--accent);
+  color: #fff;
+}
+
+.episodes {
+  display: flex;
+}
+
+.episode-card {
+  flex: none;
+  width: 380px;
+  margin: 0 24px 0 0;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.episode-card--current {
+  opacity: 1;
+}
+
+.episode-card__image {
+  position: relative;
+  height: 214px;
+  overflow: hidden;
+  border: 3px solid transparent;
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.episode-card--selected .episode-card__image {
+  border-color: var(--text);
+}
+
+.episode-card__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.episode-card__play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  fill: #fff;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.episode-card--selected .episode-card__play {
+  opacity: 0.9;
+}
+
+.episode-card__progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.episode-card__progress div {
+  height: 100%;
+  background: var(--accent);
+}
+
+.episode-card figcaption {
+  padding: 12px 4px 0;
+}
+
+.episode-card__number {
+  display: block;
+  color: var(--gold);
+  font-size: 16px;
+}
+
+.episode-card__title {
+  display: block;
+  margin-top: 4px;
+  font-size: 24px;
+  font-style: italic;
+  font-weight: 600;
+}
+
+/* Séries similaires : sous les épisodes, visibles quand le contenu remonte. */
+.series__similar {
+  position: absolute;
+  top: 890px;
+  left: 120px;
+  right: 0;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.series--similar .series__similar {
+  opacity: 1;
+}
+
+.episode-card,
+.series__plot-icon {
+  cursor: pointer;
+}
