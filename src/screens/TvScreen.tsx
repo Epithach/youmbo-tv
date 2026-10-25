@@ -34,7 +34,7 @@ const BANNER_MS = 3000;
  * Pause avant de lancer la chaîne sélectionnée dans la liste : on ne lance pas un
  * flux à chaque chaîne survolée (l'abonnement n'autorise souvent qu'une connexion).
  */
-const PREVIEW_DELAY_MS = 700;
+const PREVIEW_DELAY_MS = 1200;
 
 type Column = 'groups' | 'channels';
 
