@@ -3,7 +3,7 @@ import { firstImage, loadVodDetails, type CatalogItem, type VodInfo } from '../.
 import { displayTitle, resizePoster } from '../../core/catalog-display';
 import { loadVolume } from '../../core/storage';
 import type { XtreamCredentials } from '../../core/xtream';
-import { YoutubeBackground } from '../../ui/YoutubeBackground';
+import { TrailerBackground } from '../../ui/TrailerBackground';
 import { Badges } from './FlixParts';
 
 /** Attente avant de demander la fiche d'un film sélectionné (pas pendant un défilement). */
@@ -67,7 +67,7 @@ export function Hero(props: HeroProps) {
           </Show>
           <Show when={preview()}>
             {(id) => (
-              <YoutubeBackground
+              <TrailerBackground
                 id={id()}
                 class="hero__preview"
                 title="Bande-annonce"

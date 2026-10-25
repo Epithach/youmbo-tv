@@ -2519,3 +2519,9 @@ body {
 .flix-row__title {
   margin-bottom: 24px;
 }
+
+/* Bande-annonce en vidéo directe (Invidious) : même cadre que le lecteur YouTube. */
+.trailer-video {
+  object-fit: cover;
+  background: transparent;
+}
