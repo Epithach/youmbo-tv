@@ -187,7 +187,7 @@ test('YoumboFlix : bande-annonce en fond de la bannière après une courte atten
   // La bande-annonce YouTube (avec le son) démarre après une courte attente.
   await expect(page.locator('.hero__preview')).toHaveAttribute(
     'src',
-    /youtube-nocookie.*autoplay=1/,
+    /youtube\.com\/embed.*autoplay=1/,
     {
       timeout: 8000,
     },
@@ -211,7 +211,9 @@ test('fiche film : la bande-annonce joue en musique de fond, avec le son', async
 
   // Après un court délai, la bande-annonce démarre derrière la fiche (son en fondu).
   const music = page.locator('.detail__music-video');
-  await expect(music).toHaveAttribute('src', /youtube-nocookie.*autoplay=1/, { timeout: 8000 });
+  await expect(music).toHaveAttribute('src', /youtube\.com\/embed.*autoplay=1/, {
+    timeout: 8000,
+  });
   await expect(music).toHaveAttribute('src', /enablejsapi=1/);
 
   // Quitter la fiche coupe la musique.

@@ -2442,3 +2442,80 @@ body {
     transition: none !important;
   }
 }
+
+/* --- Catalogue : image du titre sélectionné en plein écran --- */
+
+.flix {
+  position: relative;
+}
+
+/* Image et bande-annonce couvrent tout l'écran, derrière la bannière et la rangée. */
+.hero {
+  position: static;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+}
+
+.hero__backdrop {
+  top: 0;
+  left: 0;
+  right: auto;
+  width: 100%;
+  height: 100%;
+  -webkit-mask-image: none;
+  mask-image: none;
+  opacity: 1;
+}
+
+.hero__preview {
+  top: 50%;
+  left: 50%;
+  right: auto;
+  width: 100vw;
+  height: 56.25vw;
+  min-width: 177.78vh;
+  min-height: 100vh;
+  transform: translate(-50%, -50%);
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+/* Assombrit la gauche (titre, résumé) au-dessus de l'image. */
+.flix::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  background:
+    linear-gradient(90deg, rgba(5, 6, 8, 0.85) 0%, rgba(5, 6, 8, 0.45) 40%, transparent 70%),
+    linear-gradient(180deg, rgba(5, 6, 8, 0.35) 0%, transparent 30%);
+  pointer-events: none;
+}
+
+.hero__content,
+.flix__message {
+  position: relative;
+  z-index: 2;
+}
+
+/* La rangée flotte sur un verre très flou, sur toute la largeur de l'écran. */
+.flix__rows {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  margin: 0 -48px -32px calc(-1 * (var(--side-nav-width) + 48px));
+  padding: 24px 48px 32px calc(var(--side-nav-width) + 48px);
+  border-top: 1px solid var(--glass-border);
+  background: rgba(10, 12, 18, 0.62);
+  -webkit-backdrop-filter: blur(30px) saturate(1.2);
+  backdrop-filter: blur(30px) saturate(1.2);
+}
+
+/* Un peu d'air entre le titre de la rangée et l'affiche qui se soulève. */
+.flix-row__title {
+  margin-bottom: 24px;
+}
