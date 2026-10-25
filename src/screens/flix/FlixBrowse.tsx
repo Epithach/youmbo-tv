@@ -18,11 +18,11 @@ import { Marquee } from '../../ui/Marquee';
 import { clamp, useRemote } from '../../ui/remote';
 import { openSideNav, SideNav } from '../../ui/SideNav';
 import { animeOpenings } from './DetailMusic';
-import { Hero, HERO_BUTTONS } from './Hero';
+import { Hero } from './Hero';
 
-/** Rangées rendues autour de la sélection : elle reste la première sous la bannière. */
+/** Une seule rangée affichée (la sélectionnée) : la bannière prend le reste de l'écran. */
 const ROWS_BEFORE = 0;
-const ROWS_AFTER = 3;
+const ROWS_AFTER = 0;
 /** Affiches rendues dans une rangée autour de la sélection. */
 const POSTERS_BEFORE = 2;
 const POSTERS_AFTER = 8;
@@ -33,13 +33,10 @@ const WHEEL_DELAY_MS = 180;
 /** Attente sur un titre avant de chercher son opening (animés). */
 const PREFETCH_DELAY_MS = 600;
 
-/** Rangée « virtuelle » au-dessus des affiches : la bannière. */
-const HERO_ROW = -1;
-
 /** Position dans l'accueil YoumboFlix, conservée quand on ouvre une fiche. */
 export interface BrowsePosition {
   tab: CatalogKind;
-  /** Rangée sélectionnée par catalogue ; -1 : bannière. */
+  /** Rangée sélectionnée par catalogue. */
   rows: Record<CatalogKind, number>;
   /** Affiche sélectionnée par rangée (`kind|clé de la rangée`). */
   columns: Record<string, number>;
@@ -56,8 +53,6 @@ interface FlixBrowseProps {
   position: BrowsePosition;
   onPositionChange: (position: BrowsePosition) => void;
   onOpen: (item: CatalogItem) => void;
-  /** Bannière : « Lecture » (film lancé directement, série ouverte). */
-  onPlay: (item: CatalogItem) => void;
 }
 
 type RowState = CatalogItem[] | 'loading' | 'error';
@@ -137,12 +132,7 @@ export function FlixBrowse(props: FlixBrowseProps) {
     props.onPositionChange({ ...props.position, ...next });
   const setRow = (value: number) => update({ rows: { ...props.position.rows, [kind()]: value } });
 
-  const [heroButton, setHeroButton] = createSignal(0);
-
-  /**
-   * Titre de la bannière : l'affiche sélectionnée quand on parcourt les rangées,
-   * sinon la première nouveauté (première rangée du fournisseur).
-   */
+  /** Titre de la bannière : l'affiche sélectionnée, sinon la première nouveauté. */
   const featured = () => {
     const first = providerRows()[0];
     return first ? itemsOf(first)[0] : undefined;
@@ -150,12 +140,6 @@ export function FlixBrowse(props: FlixBrowseProps) {
   const heroItem = () => {
     const current = catalogRows()[row()];
     return (current && itemsOf(current)[column(current)]) || featured();
-  };
-  const pressHero = (button: number) => {
-    const item = heroItem();
-    if (!item) return;
-    if (button === 0) props.onPlay(item);
-    else props.onOpen(item);
   };
   // Opening d'un animé cherché dès qu'il reste sélectionné : AnimeThemes est lent.
   createEffect(() => {
@@ -177,7 +161,7 @@ export function FlixBrowse(props: FlixBrowseProps) {
    * la suivante une fois la rangée décalée.
    */
   const moveRow = (delta: number) => {
-    const target = clamp(row() + delta, HERO_ROW, catalogRows().length - 1);
+    const target = clamp(row() + delta, 0, catalogRows().length - 1);
     const from = catalogRows()[row()];
     const to = catalogRows()[target];
     if (!from || !to || target === row()) return setRow(target);
@@ -203,17 +187,6 @@ export function FlixBrowse(props: FlixBrowseProps) {
 
   useRemote((key) => {
     const current = catalogRows()[row()];
-
-    // Bannière : ← → entre « Lecture » et « Plus d'infos », puis le bandeau à gauche.
-    if (row() === HERO_ROW) {
-      if (key === 'left' && heroButton() === 0) openSideNav();
-      else if (key === 'left' || key === 'right') {
-        setHeroButton(clamp(heroButton() + (key === 'left' ? -1 : 1), 0, HERO_BUTTONS.length - 1));
-      } else if (key === 'ok') pressHero(heroButton());
-      else if (key === 'down') setRow(0);
-      else if (key === 'back') app.navigate('home');
-      return;
-    }
 
     switch (key) {
       case 'up':
@@ -253,13 +226,7 @@ export function FlixBrowse(props: FlixBrowseProps) {
           when={catalogRows().length > 0}
           fallback={<p class="flix__message">Rien de disponible pour ce pays.</p>}
         >
-          <Hero
-            credentials={props.credentials}
-            item={heroItem()}
-            focused={row() === HERO_ROW}
-            button={heroButton()}
-            onPress={pressHero}
-          />
+          <Hero credentials={props.credentials} item={heroItem()} />
           <div class="flix__rows" onWheel={onWheel}>
             <For each={visibleRows()}>
               {({ catalogRow, index }) => (
